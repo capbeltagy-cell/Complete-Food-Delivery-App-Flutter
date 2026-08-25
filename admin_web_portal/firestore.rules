@@ -1,9 +1,65 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /{document=**} {
-      allow read, write: if true;
-          
+    function signedIn() { return request.auth != null; }
+    function isAdmin() { return signedIn() && (request.auth.token.admin == true || exists(/databases/$(database)/documents/admins/$(request.auth.uid))); }
+    function owns(field) { return signedIn() && resource.data[field] == request.auth.uid; }
+    function createsOwn(field) { return signedIn() && request.resource.data[field] == request.auth.uid; }
+    function only(fields) { return request.resource.data.diff(resource.data).changedKeys().hasOnly(fields); }
+
+    match /admins/{uid} { allow read: if signedIn() && request.auth.uid == uid; allow write: if false; }
+    match /users/{uid} {
+      allow create: if signedIn() && request.auth.uid == uid && request.resource.data.keys().hasNone(['admin','role','verified','featured','paid']);
+      allow read: if isAdmin() || (signedIn() && request.auth.uid == uid);
+      allow update: if isAdmin() || (signedIn() && request.auth.uid == uid && only(['name','phone','photoUrl','address','updatedAt']));
+      allow delete: if isAdmin();
+      match /orders/{id} { allow create: if signedIn() && request.auth.uid == uid && request.resource.data.orderedBy == uid; allow read: if isAdmin() || (signedIn() && request.auth.uid == uid); allow update: if isAdmin(); }
     }
+    match /sellers/{id} {
+      allow create: if signedIn() && request.auth.uid == id && request.resource.data.status == 'pending';
+      allow read: if isAdmin() || (signedIn() && request.auth.uid == id);
+      allow update: if isAdmin() || (signedIn() && request.auth.uid == id && only(['sellerName','sellerAvtar','phone','address','lat','lng','updatedAt']));
+      allow delete: if isAdmin();
+    }
+    match /riders/{id} {
+      allow create: if signedIn() && request.auth.uid == id && request.resource.data.status == 'pending';
+      allow read: if isAdmin() || (signedIn() && request.auth.uid == id);
+      allow update: if isAdmin() || (signedIn() && request.auth.uid == id && only(['available','availabilityUpdatedAt','lat','lng','address']));
+      allow delete: if isAdmin();
+    }
+    match /stores/{id} {
+      allow read: if isAdmin() || resource.data.status == 'approved' || owns('ownerId');
+      allow create: if createsOwn('ownerId') && request.resource.data.status == 'pending' && request.resource.data.verified == false && request.resource.data.featured == false;
+      allow update: if isAdmin() || (owns('ownerId') && only(['name','description','logo','cover','categoryId','cityId','areaId','villageId','address','latitude','longitude','phone','whatsapp','openingHours','isOpen','deliveryEnabled','pickupEnabled','deliveryZones','minimumOrder','deliveryFee','updatedAt']));
+      allow delete: if isAdmin();
+    }
+    match /products/{id} {
+      allow read: if resource.data.available == true || isAdmin();
+      allow create: if createsOwn('ownerId') && request.resource.data.featured == false;
+      allow update: if isAdmin() || (owns('ownerId') && only(['name','description','images','price','salePrice','stock','categoryId','options','available','deliveryEligible','updatedAt']));
+      allow delete: if isAdmin() || owns('ownerId');
+    }
+    match /orders/{id} {
+      allow create: if createsOwn('orderedBy') && request.resource.data.status in ['received','waitingMerchantApproval'];
+      allow read: if isAdmin() || owns('orderedBy') || owns('sellerUID') || owns('riderUID');
+      allow update: if isAdmin() || (owns('sellerUID') && only(['status','updatedAt'])) || (owns('riderUID') && only(['status','lat','lng','address','updatedAt'])) || (signedIn() && resource.data.riderUID == '' && request.resource.data.riderUID == request.auth.uid && only(['riderUID','riderName','status','lat','lng','address','updatedAt']));
+    }
+    match /categories/{id} { allow read: if resource.data.active == true || isAdmin(); allow write: if isAdmin(); }
+    match /cities/{id} { allow read: if resource.data.active == true || isAdmin(); allow write: if isAdmin(); }
+    match /areas/{id} { allow read: if resource.data.active == true || isAdmin(); allow write: if isAdmin(); }
+    match /villages/{id} { allow read: if resource.data.active == true || isAdmin(); allow write: if isAdmin(); }
+    match /serviceZones/{id} { allow read: if resource.data.active == true || isAdmin(); allow write: if isAdmin(); }
+    match /communityPosts/{postId} {
+      allow read: if resource.data.status == 'published' || isAdmin() || owns('authorId');
+      allow create: if createsOwn('authorId') && request.resource.data.sponsored == false && request.resource.data.authorVerified == false && request.resource.data.helpfulCount == 0 && request.resource.data.replyCount == 0 && request.resource.data.status in ['published','pendingReview'];
+      allow update: if isAdmin() || (owns('authorId') && only(['title','body','type','categoryId','images','updatedAt']));
+      allow delete: if isAdmin();
+      match /replies/{id} { allow read: if resource.data.status == 'published' || isAdmin(); allow create: if createsOwn('authorId') && request.resource.data.authorVerified == false && request.resource.data.helpfulCount == 0; allow update, delete: if isAdmin(); }
+      match /helpful/{uid} { allow read: if signedIn(); allow create: if signedIn() && request.auth.uid == uid; allow update, delete: if false; }
+    }
+    match /reports/{id} { allow create: if createsOwn('reporterId') && request.resource.data.status == 'open'; allow read, update, delete: if isAdmin(); }
+    match /appSettings/{id} { allow read: if true; allow write: if isAdmin(); }
+    match /subscriptions/{id} { allow read: if isAdmin() || owns('userId'); allow write: if isAdmin(); }
+    match /{document=**} { allow read, write: if isAdmin(); }
   }
 }
