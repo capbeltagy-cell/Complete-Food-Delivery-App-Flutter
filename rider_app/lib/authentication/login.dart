@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:dierb_core/dierb_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
@@ -74,7 +75,7 @@ class _LoginScreenState extends State<LoginScreen> {
         .get()
         .then((snapshot) async {
       if (snapshot.exists) {
-        if (snapshot.data()!["status"] == "Approved") {
+        if (snapshot.data()!["status"] == "Approved" || snapshot.data()!["status"] == MerchantStatus.approved.name) {
           await sharedPreferences!.setString("uid", currentUser.uid);
           await sharedPreferences!
               .setString("email", snapshot.data()!["riderEmail"]);
@@ -151,7 +152,7 @@ class _LoginScreenState extends State<LoginScreen> {
               formValidation();
             },
             style: ElevatedButton.styleFrom(
-                primary: Colors.redAccent.shade100,
+                backgroundColor: Colors.redAccent.shade100,
                 padding:
                     const EdgeInsets.symmetric(horizontal: 50, vertical: 20)),
             child: const Text(

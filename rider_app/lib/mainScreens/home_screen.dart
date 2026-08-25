@@ -7,179 +7,43 @@ import 'package:rider_app/mainScreens/new_orders_screen.dart';
 import 'package:rider_app/mainScreens/not_yetDelivered_screen.dart';
 import 'package:rider_app/mainScreens/parcel_in_progress.dart';
 
-import '../../authentication/auth_screen.dart';
 import '../assistant_methods/get_current_location.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
-
-  @override
-  State<HomeScreen> createState() => _HomeScreenState();
+  @override State<HomeScreen> createState() => _HomeScreenState();
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  Card makeDashboardItems(String title, IconData iconData, int index) {
-    return Card(
-      elevation: 2,
-      margin: const EdgeInsets.all(8),
-      child: Container(
-        decoration: index == 0 || index == 3 || index == 4
-            ? const BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [Colors.redAccent, Colors.pinkAccent],
-                  begin: FractionalOffset(0.0, 0.0),
-                  end: FractionalOffset(1.0, 0.0),
-                  stops: [0.0, 1.0],
-                  tileMode: TileMode.clamp,
-                ),
-              )
-            : const BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [Colors.redAccent, Colors.amber],
-                  begin: FractionalOffset(0.0, 0.0),
-                  end: FractionalOffset(1.0, 0.0),
-                  stops: [0.0, 1.0],
-                  tileMode: TileMode.clamp,
-                ),
-              ),
-        child: InkWell(
-          onTap: () {
-            if (index == 0) {
-              // new order
-              Navigator.push(context,
-                  MaterialPageRoute(builder: (c) => const NewOrdersScreen()));
-            }
-            //Parcel in progress
-            if (index == 1) {
-              Navigator.push(context,
-                  MaterialPageRoute(builder: (c) => const ParcelInProgress()));
-            }
-            if (index == 2) {
-              // not yet delivered
-              Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                      builder: (c) => const NotYetDeliveredScreen()));
-            }
-            if (index == 3) {
-              // history
-              Navigator.push(context,
-                  MaterialPageRoute(builder: (c) => const HistoryScreen()));
-            }
-            if (index == 4) {
-              // total earning
-              Navigator.push(context,
-                  MaterialPageRoute(builder: (c) => const EarningScreen()));
-            }
-            if (index == 5) {
-              // logout
-              firebaseAuth.signOut().then((value) {
-                Navigator.push(context,
-                    MaterialPageRoute(builder: (c) => const AuthScreen()));
-              });
-            }
-          },
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            mainAxisSize: MainAxisSize.min,
-            verticalDirection: VerticalDirection.down,
-            children: [
-              const SizedBox(
-                height: 50,
-              ),
-              Center(
-                child: Icon(
-                  iconData,
-                  size: 40,
-                  color: Colors.black,
-                ),
-              ),
-              const SizedBox(
-                height: 10,
-              ),
-              Center(
-                child: Text(
-                  title,
-                  style: const TextStyle(fontSize: 16, color: Colors.black),
-                ),
-              )
-            ],
-          ),
-        ),
-      ),
-    );
-  }
+  String get riderId => sharedPreferences?.getString('uid') ?? '';
+  @override void initState() { super.initState(); UserLocation().getCurrentLocation(); getPerParcelDeliveryAmount(); getRiderPreviousEarnings(); }
 
-  @override
-  void initState() {
-    super.initState();
-    UserLocation uLocation = UserLocation();
-    uLocation.getCurrentLocation();
-    getPerParcelDeliveryAmount();
-    getRiderPreviousEarnings();
-  }
+  Future<void> _setAvailable(bool available) => FirebaseFirestore.instance.collection('riders').doc(riderId).update(<String, dynamic>{'available': available, 'availabilityUpdatedAt': FieldValue.serverTimestamp()});
+  void _open(Widget page) => Navigator.push(context, MaterialPageRoute(builder: (_) => page));
+  void getRiderPreviousEarnings() => FirebaseFirestore.instance.collection('riders').doc(riderId).get().then((snap) => previousRidersEarnings = snap.data()?['earnings']?.toString() ?? '0');
+  void getPerParcelDeliveryAmount() => FirebaseFirestore.instance.collection('appSettings').doc('delivery').get().then((snap) => perParcelDeliveryAmount = snap.data()?['defaultRiderFee']?.toString() ?? '0');
 
-  getRiderPreviousEarnings() {
-    FirebaseFirestore.instance
-        .collection("riders")
-        .doc(sharedPreferences!.getString("uid"))
-        .get()
-        .then((snap) {
-      previousRidersEarnings = snap.data()!["earnings"].toString();
-    });
-  }
+  @override Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [const Text('ديرب للمندوبين', style: TextStyle(fontWeight: FontWeight.w900)), Text(sharedPreferences?.getString('name') ?? '', style: const TextStyle(fontSize: 12))])),
+    body: ListView(padding: const EdgeInsets.all(16), children: [
+      StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(stream: FirebaseFirestore.instance.collection('riders').doc(riderId).snapshots(), builder: (_, snapshot) {
+        final available = snapshot.data?.data()?['available'] == true;
+        return Container(padding: const EdgeInsets.all(18), decoration: BoxDecoration(gradient: LinearGradient(colors: available ? const [Color(0xFF14532D), Color(0xFF22A060)] : const [Color(0xFF4B5563), Color(0xFF6B7280)]), borderRadius: BorderRadius.circular(24)), child: Row(children: [Icon(available ? Icons.delivery_dining_rounded : Icons.pause_circle_rounded, color: Colors.white, size: 48), const SizedBox(width: 12), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(available ? 'متاح لاستقبال طلبات' : 'أنت غير متاح الآن', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 17)), const SizedBox(height: 4), const Text('التعيين يتم حسب منطقة التوصيل', style: TextStyle(color: Colors.white70))])), Switch(value: available, onChanged: _setAvailable)]));
+      }),
+      const SizedBox(height: 22), const Text('شغلك اليوم', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900)), const SizedBox(height: 12),
+      GridView.count(shrinkWrap: true, physics: const NeverScrollableScrollPhysics(), crossAxisCount: 2, childAspectRatio: 1.15, crossAxisSpacing: 12, mainAxisSpacing: 12, children: [
+        _Tile(Icons.assignment_rounded, 'طلبات توصيل متاحة', 'اختار مهمة قريبة', () => _open(const NewOrdersScreen())),
+        _Tile(Icons.store_mall_directory_rounded, 'جاري الاستلام', 'توجه للمتجر', () => _open(const ParcelInProgress())),
+        _Tile(Icons.route_rounded, 'في الطريق', 'تواصل مع العميل', () => _open(const NotYetDeliveredScreen())),
+        _Tile(Icons.history_rounded, 'سجل التوصيل', 'طلباتك السابقة', () => _open(const HistoryScreen())),
+        _Tile(Icons.account_balance_wallet_rounded, 'الأرباح', 'راجع مستحقاتك', () => _open(const EarningScreen())),
+        _Tile(Icons.map_rounded, 'مناطق العمل', 'مناطق التوصيل', () {}),
+      ]),
+    ]),
+  );
+}
 
-  getPerParcelDeliveryAmount() {
-    FirebaseFirestore.instance
-        .collection("perDelivery")
-        .doc("alizeb438")
-        .get()
-        .then((snap) {
-      perParcelDeliveryAmount = snap.data()!["amount"].toString();
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        flexibleSpace: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              colors: [Colors.red, Colors.pink],
-              begin: FractionalOffset(0.0, 0.0),
-              end: FractionalOffset(1.0, 0.0),
-              stops: [0.0, 1.0],
-              tileMode: TileMode.clamp,
-            ),
-          ),
-        ),
-        title: Text(
-          "Welcome ${sharedPreferences!.getString("name")!}",
-          style: const TextStyle(
-              fontSize: 25,
-              color: Colors.white,
-              letterSpacing: 2,
-              fontFamily: "Signatra"),
-        ),
-        centerTitle: true,
-        automaticallyImplyLeading: false,
-      ),
-      body: Container(
-        padding: const EdgeInsets.symmetric(vertical: 50, horizontal: 1),
-        child: GridView.count(
-          crossAxisCount: 2,
-          padding: const EdgeInsets.all(2),
-          children: [
-            makeDashboardItems("New Available Orders", Icons.assignment, 0),
-            makeDashboardItems("Parcel in Progress", Icons.airport_shuttle, 1),
-            makeDashboardItems("Not Yet Delivered", Icons.location_history, 2),
-            makeDashboardItems("History", Icons.done, 3),
-            makeDashboardItems("Totol Earning", Icons.monetization_on, 4),
-            makeDashboardItems("Logout", Icons.logout, 5),
-          ],
-        ),
-      ),
-    );
-  }
+class _Tile extends StatelessWidget {
+  const _Tile(this.icon, this.title, this.subtitle, this.onTap); final IconData icon; final String title; final String subtitle; final VoidCallback onTap;
+  @override Widget build(BuildContext context) => InkWell(onTap: onTap, borderRadius: BorderRadius.circular(20), child: Container(padding: const EdgeInsets.all(15), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Icon(icon, color: const Color(0xFF166534), size: 31), const Spacer(), Text(title, style: const TextStyle(fontWeight: FontWeight.w900)), const SizedBox(height: 3), Text(subtitle, style: const TextStyle(fontSize: 12, color: Colors.grey))])));
 }

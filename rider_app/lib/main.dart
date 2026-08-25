@@ -18,11 +18,14 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Riders App',
+      title: 'ديرب للمندوبين',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        primarySwatch: Colors.blue,
+        useMaterial3: true,
+        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF166534)),
+        scaffoldBackgroundColor: const Color(0xFFF7F8F5),
       ),
+      builder: (context, child) => Directionality(textDirection: TextDirection.rtl, child: child!),
       home: const MySplashScreen(),
     );
   }

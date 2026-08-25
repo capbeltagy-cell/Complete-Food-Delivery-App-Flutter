@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:dierb_core/dierb_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:geocoding/geocoding.dart';
@@ -157,7 +158,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
       "riderAvtar": sellerImageUrl,
       "phone": phoneController.text.trim(),
       "address": completeAddress,
-      "status": "Approved",
+      "status": MerchantStatus.pending.name,
+      "cityId": LaunchLocationDefaults.cityId,
+      "available": false,
+      "serviceZoneIds": <String>[],
       "lat": position!.latitude,
       "lng": position!.longitude,
     });
@@ -264,7 +268,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         style: TextStyle(color: Colors.white),
                       ),
                       style: ElevatedButton.styleFrom(
-                          primary: Color.fromARGB(255, 249, 168, 87),
+                          backgroundColor: Color.fromARGB(255, 249, 168, 87),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(30),
                           )),
@@ -281,7 +285,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 formValidation(),
               },
               style: ElevatedButton.styleFrom(
-                  primary: Colors.redAccent.shade100,
+                  backgroundColor: Colors.redAccent.shade100,
                   padding:
                       const EdgeInsets.symmetric(horizontal: 50, vertical: 20)),
               child: const Text(
