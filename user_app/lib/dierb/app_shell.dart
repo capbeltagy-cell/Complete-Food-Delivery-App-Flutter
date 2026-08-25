@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'home_page.dart';
 import '../community/ask_dierb_page.dart';
+import '../marketplace/categories_page.dart';
 
 class DierbAppShell extends StatefulWidget {
   const DierbAppShell({super.key});
@@ -29,7 +30,7 @@ class _DierbAppShellState extends State<DierbAppShell> {
         index: currentIndex,
         children: [
           const DierbHomePage(),
-          _ComingSoon(title: labels[1], icon: icons[1]),
+          const CategoriesPage(),
           const AskDierbPage(),
           _ComingSoon(title: labels[3], icon: icons[3]),
           _ComingSoon(title: labels[4], icon: icons[4]),
