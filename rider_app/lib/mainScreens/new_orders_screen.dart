@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:dierb_core/dierb_core.dart';
 import 'package:flutter/material.dart';
 
 import 'package:rider_app/widgets/progress_bar.dart';
@@ -25,7 +26,7 @@ class _NewOrdersScreenState extends State<NewOrdersScreen> {
         body: StreamBuilder<QuerySnapshot>(
           stream: FirebaseFirestore.instance
               .collection("orders")
-              .where("status", isEqualTo: "normal")
+              .where("status", whereIn: <String>['normal', OrderStatus.readyForPickup.name])
               .orderBy("orderTime", descending: true)
               .snapshots(),
           builder: (c, snapshot) {

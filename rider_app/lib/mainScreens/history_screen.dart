@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:dierb_core/dierb_core.dart';
 import 'package:rider_app/global/global.dart';
 
 import 'package:rider_app/widgets/progress_bar.dart';
@@ -28,7 +29,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
           stream: FirebaseFirestore.instance
               .collection("orders")
               .where("riderUID", isEqualTo: sharedPreferences!.getString("uid"))
-              .where("status", isEqualTo: "ended")
+              .where("status", whereIn: <String>['ended', OrderStatus.delivered.name, OrderStatus.cancelled.name])
               .snapshots(),
           builder: (c, snapshot) {
             return snapshot.hasData

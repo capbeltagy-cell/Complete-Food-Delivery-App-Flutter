@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:dierb_core/dierb_core.dart';
 import 'package:flutter/material.dart';
 import 'package:seller_app/assistant_methods/assistant_methods.dart';
 import 'package:seller_app/global/global.dart';
@@ -26,7 +27,7 @@ class _NewOrdersScreenState extends State<NewOrdersScreen> {
         body: StreamBuilder<QuerySnapshot>(
           stream: FirebaseFirestore.instance
               .collection("orders")
-              .where("status", isEqualTo: "normal")
+              .where("status", whereIn: <String>['normal', OrderStatus.received.name, OrderStatus.waitingMerchantApproval.name])
               .where("sellerUID", isEqualTo:sharedPreferences!.getString("uid"))
               .snapshots(),
           builder: (c, snapshot) {

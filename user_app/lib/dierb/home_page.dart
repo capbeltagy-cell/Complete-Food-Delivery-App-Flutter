@@ -1,3 +1,4 @@
+import 'package:dierb_core/dierb_core.dart';
 import 'package:flutter/material.dart';
 
 import 'app_config.dart';
@@ -5,16 +6,9 @@ import 'app_config.dart';
 class DierbHomePage extends StatelessWidget {
   const DierbHomePage({super.key});
 
-  static const categories = [
-    ('مطاعم', Icons.restaurant_rounded, Color(0xFFFFE8D6)),
-    ('سوبر ماركت', Icons.shopping_basket_rounded, Color(0xFFE0F2E9)),
-    ('صيدليات', Icons.local_pharmacy_rounded, Color(0xFFE6EEFF)),
-    ('خدمات', Icons.handyman_rounded, Color(0xFFFFF2C7)),
-    ('عقارات', Icons.apartment_rounded, Color(0xFFEDE4FF)),
-    ('وظائف', Icons.work_rounded, Color(0xFFFFE5E9)),
-    ('موبايلات', Icons.smartphone_rounded, Color(0xFFE1F5FE)),
-    ('دليل ديرب', Icons.location_city_rounded, Color(0xFFE8ECEF)),
-  ];
+  static final categories = LaunchCategoryDefaults.values
+      .where((category) => category.featured && category.active)
+      .toList(growable: false);
 
   @override
   Widget build(BuildContext context) {
@@ -50,17 +44,17 @@ class DierbHomePage extends StatelessWidget {
               ),
               itemCount: categories.length,
               itemBuilder: (context, index) {
-                final item = categories[index];
+                final category = categories[index];
                 return Column(
                   children: [
                     Container(
                       width: 62,
                       height: 62,
-                      decoration: BoxDecoration(color: item.$3, borderRadius: BorderRadius.circular(20)),
-                      child: Icon(item.$2, color: const Color(0xFF1F2937)),
+                      decoration: BoxDecoration(color: _categoryColor(index), borderRadius: BorderRadius.circular(20)),
+                      child: Icon(_categoryIcon(category.icon), color: const Color(0xFF1F2937)),
                     ),
                     const SizedBox(height: 7),
-                    Text(item.$1, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+                    Text(category.nameAr, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
                   ],
                 );
               },
@@ -77,6 +71,28 @@ class DierbHomePage extends StatelessWidget {
       ),
     );
   }
+
+  static Color _categoryColor(int index) {
+    const colors = <Color>[
+      Color(0xFFFFE8D6), Color(0xFFE0F2E9), Color(0xFFE6EEFF), Color(0xFFFFF2C7),
+      Color(0xFFEDE4FF), Color(0xFFFFE5E9), Color(0xFFE1F5FE), Color(0xFFE8ECEF),
+    ];
+    return colors[index % colors.length];
+  }
+
+  static IconData _categoryIcon(String icon) {
+    const icons = <String, IconData>{
+      'restaurant': Icons.restaurant_rounded,
+      'shopping_basket': Icons.shopping_basket_rounded,
+      'local_pharmacy': Icons.local_pharmacy_rounded,
+      'handyman': Icons.handyman_rounded,
+      'apartment': Icons.apartment_rounded,
+      'work': Icons.work_rounded,
+      'smartphone': Icons.smartphone_rounded,
+      'location_city': Icons.location_city_rounded,
+    };
+    return icons[icon] ?? Icons.category_rounded;
+  }
 }
 
 class _Header extends StatelessWidget {
@@ -92,10 +108,10 @@ class _Header extends StatelessWidget {
               child: const Center(child: Text('د', style: TextStyle(color: Colors.white, fontSize: 25, fontWeight: FontWeight.w900))),
             ),
             const SizedBox(width: 12),
-            const Expanded(
+            Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text('أهلاً بيك في ديرب', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
-                Row(children: [Icon(Icons.location_on_rounded, size: 15, color: AppConfig.brandColor), SizedBox(width: 4), Text(AppConfig.launchCityLabel)]),
+                const Text('أهلاً بيك في ديرب', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
+                Row(children: [const Icon(Icons.location_on_rounded, size: 15, color: AppConfig.brandColor), const SizedBox(width: 4), Text(LaunchLocationDefaults.city.nameAr)]),
               ]),
             ),
             IconButton.filledTonal(onPressed: () {}, icon: const Icon(Icons.notifications_none_rounded)),

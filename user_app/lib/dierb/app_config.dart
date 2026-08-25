@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 abstract final class AppConfig {
   static const appNameAr = 'ديرب';
   static const appNameEn = 'Dierb';
-  static const launchCityLabel = 'ديرب نجم';
   static const brandColor = Color(0xFF166534);
   static const accentColor = Color(0xFFF59E0B);
 }

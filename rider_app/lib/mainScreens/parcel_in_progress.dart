@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:dierb_core/dierb_core.dart';
 
 import 'package:rider_app/widgets/progress_bar.dart';
 import 'package:rider_app/widgets/simple_Appbar.dart';
@@ -28,7 +29,7 @@ class _ParcelInProgressState extends State<ParcelInProgress> {
           stream: FirebaseFirestore.instance
               .collection("orders")
               .where("riderUID", isEqualTo: sharedPreferences!.getString("uid"))
-              .where("status", isEqualTo: "picking")
+              .where("status", whereIn: <String>['picking', OrderStatus.pickedUpByRider.name])
               .snapshots(),
           builder: (c, snapshot) {
             return snapshot.hasData
