@@ -1,4 +1,5 @@
 import 'category.dart';
+import 'community.dart';
 import 'location.dart';
 import 'product.dart';
 import 'store.dart';
@@ -34,4 +35,13 @@ abstract class StoreRepository {
 
 abstract class ProductRepository {
   Future<PageResult<Product>> productsForStore(String storeId, PageRequest page, {String? categoryId});
+}
+
+abstract class CommunityRepository {
+  Future<PageResult<CommunityPost>> publishedPosts(LocationRef location, PageRequest page, {CommunityPostType? type});
+  Future<List<CommunityReply>> replies(String postId, {int limit = 50});
+  Future<String> publishPost(CommunityPost post);
+  Future<String> publishReply(CommunityReply reply);
+  Future<void> markHelpful(String postId, String userId);
+  Future<void> reportContent({required String targetType, required String targetId, required String reason, required String reporterId});
 }
