@@ -1,7 +1,7 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:seller_app/global/global.dart';
-import 'package:seller_app/splashscreen/splash_screen.dart';
+import 'package:seller_app/splashScreen/splash_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 Future<void> main() async {
@@ -16,11 +16,14 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Sellers App',
+      title: 'ديرب للتجار',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        primarySwatch: Colors.blue,
+        useMaterial3: true,
+        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF166534)),
+        scaffoldBackgroundColor: const Color(0xFFF7F8F5),
       ),
+      builder: (context, child) => Directionality(textDirection: TextDirection.rtl, child: child!),
       home: const MySplashScreen(),
     );
   }
