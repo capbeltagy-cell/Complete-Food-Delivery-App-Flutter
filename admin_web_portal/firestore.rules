@@ -52,7 +52,10 @@ service cloud.firestore {
     match /communityPosts/{postId} {
       allow read: if resource.data.status == 'published' || isAdmin() || owns('authorId');
       allow create: if createsOwn('authorId') && request.resource.data.sponsored == false && request.resource.data.authorVerified == false && request.resource.data.helpfulCount == 0 && request.resource.data.replyCount == 0 && request.resource.data.status in ['published','pendingReview'];
-      allow update: if isAdmin() || (owns('authorId') && only(['title','body','type','categoryId','images','updatedAt']));
+      allow update: if isAdmin()
+        || (owns('authorId') && only(['title','body','type','categoryId','images','updatedAt']))
+        || (signedIn() && only(['helpfulCount']) && request.resource.data.helpfulCount == resource.data.helpfulCount + 1)
+        || (signedIn() && only(['replyCount','updatedAt']) && request.resource.data.replyCount == resource.data.replyCount + 1);
       allow delete: if isAdmin();
       match /replies/{id} { allow read: if resource.data.status == 'published' || isAdmin(); allow create: if createsOwn('authorId') && request.resource.data.authorVerified == false && request.resource.data.helpfulCount == 0; allow update, delete: if isAdmin(); }
       match /helpful/{uid} { allow read: if signedIn(); allow create: if signedIn() && request.auth.uid == uid; allow update, delete: if false; }

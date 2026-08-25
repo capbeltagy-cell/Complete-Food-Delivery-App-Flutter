@@ -16,7 +16,12 @@ Future<void> main() async {
   // Android can keep using its local google-services.json during migration,
   // while web preview stays available until Firebase web options are supplied.
   if (!kIsWeb) {
-    await Firebase.initializeApp();
+    try {
+      await Firebase.initializeApp();
+    } on FirebaseException {
+      // Guest discovery remains available until production Firebase options
+      // are installed locally for this application package.
+    }
   }
   runApp(const MyApp());
 }
