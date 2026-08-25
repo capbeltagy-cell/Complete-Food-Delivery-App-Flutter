@@ -1,0 +1,7 @@
+modules = ["ruby-3.2", "web"]
+
+[nix]
+channel = "stable-25_05"
+
+[agent]
+expertMode = true
