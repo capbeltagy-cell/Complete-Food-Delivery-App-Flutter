@@ -1,101 +1,47 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:dierb_core/dierb_core.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:seller_app/global/global.dart';
 
-import '../splashScreen/splash_screen.dart';
-
-class EarningScreen extends StatefulWidget {
+class EarningScreen extends StatelessWidget {
   const EarningScreen({super.key});
 
-  @override
-  State<EarningScreen> createState() => _EarningScreenState();
-}
-
-class _EarningScreenState extends State<EarningScreen> {
-  double sellerTotalEarnings = 0;
-  retriveSellersEarnings() async {
-    FirebaseFirestore.instance
-        .collection("sellers")
-        .doc(sharedPreferences!.getString("uid"))
-        .get()
-        .then((snap) {
-      setState(() {
-        sellerTotalEarnings = double.parse(snap.data()!["earnings"].toString());
-      });
-    });
-  }
-
-  @override
-  void initState() {
-    // TODO: implement initState
-    super.initState();
-    retriveSellersEarnings();
-  }
+  String get uid => FirebaseAuth.instance.currentUser?.uid ?? '';
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Scaffold(
-        backgroundColor: Colors.black,
-        body: SafeArea(
-            child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            // ignore: prefer_interpolation_to_compose_strings
-            Text(
-              "₹" + sellerTotalEarnings.toString(),
-              style: const TextStyle(
-                  fontSize: 50, color: Colors.white, fontFamily: "Signatra"),
-            ),
-            const Text(
-              "Total Earnings",
-              style: TextStyle(
-                fontSize: 20,
-                color: Colors.grey,
-                fontWeight: FontWeight.bold,
-                letterSpacing: 3,
-              ),
-            ),
-            const SizedBox(
-              height: 20,
-              width: 200,
-              child: Divider(
-                color: Colors.white,
-                thickness: 1.5,
-              ),
-            ),
-
-            const SizedBox(
-              height: 40,
-            ),
-            GestureDetector(
-              onTap: () {
-                Navigator.push(context,
-                    MaterialPageRoute(builder: (c) => MySplashScreen()));
-              },
-              child: const Card(
-                color: Colors.white,
-                margin: EdgeInsets.symmetric(vertical: 40, horizontal: 120),
-                child: ListTile(
-                  leading: Icon(
-                    Icons.arrow_back,
-                    color: Colors.grey,
-                  ),
-                  title: Text(
-                    "Back",
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: Colors.grey,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12,
+    return Scaffold(
+      appBar: AppBar(title: const Text('الأرباح', style: TextStyle(fontWeight: FontWeight.w900))),
+      body: uid.isEmpty
+          ? const Center(child: Text('سجّل الدخول أولاً'))
+          : StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+              stream: FirebaseFirestore.instance.collection('orders').where('sellerUID', isEqualTo: uid).snapshots(),
+              builder: (context, snapshot) {
+                if (snapshot.hasError) return const Center(child: Text('تعذر تحميل الأرباح'));
+                if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+                final delivered = snapshot.data!.docs.where((doc) => OrderStatusCodec.fromStorage(doc.data()['status']) == OrderStatus.delivered).toList();
+                final total = delivered.fold<double>(0, (sum, doc) => sum + ((doc.data()['total'] as num?)?.toDouble() ?? 0));
+                return ListView(
+                  padding: const EdgeInsets.all(18),
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(24),
+                      decoration: BoxDecoration(color: const Color(0xFFE0F2E9), borderRadius: BorderRadius.circular(24)),
+                      child: Column(children: [
+                        const Icon(Icons.account_balance_wallet_rounded, size: 46, color: Color(0xFF166534)),
+                        const SizedBox(height: 12),
+                        Text('${total.toStringAsFixed(0)} ج.م', style: const TextStyle(fontSize: 36, fontWeight: FontWeight.w900)),
+                        const Text('إجمالي مبيعات الطلبات المسلّمة'),
+                      ]),
                     ),
-                  ),
-                ),
-              ),
-            )
-          ],
-        )),
-      ),
+                    const SizedBox(height: 16),
+                    Card(child: ListTile(leading: const Icon(Icons.receipt_long_rounded), title: const Text('طلبات تم تسليمها'), trailing: Text('${delivered.length}', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900)))),
+                    const SizedBox(height: 10),
+                    const Text('القيمة المعروضة هي إجمالي مبيعات المتجر من الطلبات التي وصلت لحالة تم التسليم، وليست رصيد تحويل بنكي.', style: TextStyle(color: Colors.black54)),
+                  ],
+                );
+              },
+            ),
     );
   }
 }
