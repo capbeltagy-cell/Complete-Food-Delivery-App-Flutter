@@ -7,6 +7,7 @@ enum OrderStatus {
   pickedUpByRider,
   onTheWay,
   delivered,
+  rejected,
   cancelled,
 }
 
@@ -21,11 +22,12 @@ extension OrderStatusText on OrderStatus {
       case OrderStatus.pickedUpByRider: return 'استلمه المندوب';
       case OrderStatus.onTheWay: return 'في الطريق';
       case OrderStatus.delivered: return 'تم التسليم';
+      case OrderStatus.rejected: return 'رفض المتجر الطلب';
       case OrderStatus.cancelled: return 'ملغي';
     }
   }
 
-  bool get isTerminal => this == OrderStatus.delivered || this == OrderStatus.cancelled;
+  bool get isTerminal => this == OrderStatus.delivered || this == OrderStatus.rejected || this == OrderStatus.cancelled;
 }
 
 abstract class OrderStatusCodec {
