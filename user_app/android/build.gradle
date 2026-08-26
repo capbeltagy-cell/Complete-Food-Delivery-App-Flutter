@@ -5,9 +5,10 @@ subprojects { project ->
     project.buildDir = "${rootProject.buildDir}/${project.name}"
     project.evaluationDependsOn(":app")
     project.plugins.withId("com.android.library") {
+        project.android.compileSdk = 36
         project.dependencies.add(
             "compileOnly",
-            "org.checkerframework:checker-qual:3.49.5",
+            "org.checkerframework:checker-qual:3.49.5"
         )
     }
 }
