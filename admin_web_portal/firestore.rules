@@ -21,6 +21,14 @@ service cloud.firestore {
       allow update: if isAdmin() || (signedIn() && request.auth.uid == id && only(['sellerName','sellerAvtar','phone','address','lat','lng','updatedAt']));
       allow delete: if isAdmin();
     }
+    match /merchantApplications/{id} {
+      allow create: if signedIn()
+        && request.auth.uid == id
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.status == 'pending';
+      allow read: if isAdmin() || (signedIn() && request.auth.uid == id);
+      allow update, delete: if isAdmin();
+    }
     match /riders/{id} {
       allow create: if signedIn() && request.auth.uid == id && request.resource.data.status == 'pending';
       allow read: if isAdmin() || (signedIn() && request.auth.uid == id);

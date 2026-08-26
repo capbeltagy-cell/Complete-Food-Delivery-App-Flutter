@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'home_page.dart';
 import '../community/ask_dierb_page.dart';
 import '../marketplace/categories_page.dart';
+import '../orders/customer_orders_page.dart';
+import '../account/account_page.dart';
 
 class DierbAppShell extends StatefulWidget {
   const DierbAppShell({super.key});
@@ -32,8 +34,8 @@ class _DierbAppShellState extends State<DierbAppShell> {
           const DierbHomePage(),
           const CategoriesPage(),
           const AskDierbPage(),
-          _ComingSoon(title: labels[3], icon: icons[3]),
-          _ComingSoon(title: labels[4], icon: icons[4]),
+          const CustomerOrdersPage(),
+          const AccountPage(),
         ],
       ),
       bottomNavigationBar: NavigationBar(
@@ -48,31 +50,6 @@ class _DierbAppShellState extends State<DierbAppShell> {
             selectedIcon: Icon(icons[index], color: const Color(0xFF166534)),
             label: labels[index],
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _ComingSoon extends StatelessWidget {
-  const _ComingSoon({required this.title, required this.icon});
-
-  final String title;
-  final IconData icon;
-
-  @override
-  Widget build(BuildContext context) {
-    return SafeArea(
-      child: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 54, color: const Color(0xFF166534)),
-            const SizedBox(height: 14),
-            Text(title, style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800)),
-            const SizedBox(height: 8),
-            const Text('يتم تجهيز القسم ضمن مراحل ديرب القادمة'),
-          ],
         ),
       ),
     );

@@ -8,26 +8,27 @@ import 'package:user_app/assistant_methods/cart_item_counter.dart';
 import 'package:user_app/assistant_methods/total_ammount.dart';
 import 'package:user_app/dierb/app_shell.dart';
 import 'global/global.dart';
+import 'commerce/cart_controller.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   sharedPreferences = await SharedPreferences.getInstance();
-  // The checked-in repository never contains production Firebase credentials.
-  // Android can keep using its local google-services.json during migration,
-  // while web preview stays available until Firebase web options are supplied.
+  Object? firebaseStartupError;
   if (!kIsWeb) {
     try {
       await Firebase.initializeApp();
-    } on FirebaseException {
-      // Guest discovery remains available until production Firebase options
-      // are installed locally for this application package.
+    } catch (error) {
+      firebaseStartupError = error;
     }
+  } else {
+    firebaseStartupError = StateError('Firebase Web configuration is not installed.');
   }
-  runApp(const MyApp());
+  runApp(MyApp(firebaseStartupError: firebaseStartupError));
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  const MyApp({super.key, this.firebaseStartupError});
+  final Object? firebaseStartupError;
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
@@ -35,6 +36,7 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (context) => CartItemCounter()),
         ChangeNotifierProvider(create: (context) => TotalAmmount()),
         ChangeNotifierProvider(create: (context) => AddressChanger()),
+        ChangeNotifierProvider(create: (context) => CartController()),
       ],
       child: MaterialApp(
         title: 'ديرب',
@@ -52,8 +54,34 @@ class MyApp extends StatelessWidget {
           textDirection: TextDirection.rtl,
           child: child!,
         ),
-        home: const DierbAppShell(),
+        home: firebaseStartupError == null
+            ? const DierbAppShell()
+            : FirebaseStartupError(error: firebaseStartupError!),
       ),
     );
   }
+}
+
+class FirebaseStartupError extends StatelessWidget {
+  const FirebaseStartupError({super.key, required this.error});
+  final Object error;
+  @override
+  Widget build(BuildContext context) => Scaffold(
+        body: SafeArea(
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(mainAxisSize: MainAxisSize.min, children: [
+                Icon(Icons.cloud_off_rounded, size: 58, color: Theme.of(context).colorScheme.error),
+                const SizedBox(height: 16),
+                const Text('تعذر الاتصال بخدمات ديرب', style: TextStyle(fontSize: 21, fontWeight: FontWeight.w900)),
+                const SizedBox(height: 8),
+                const Text('إعداد Firebase غير صالح. أغلق التطبيق وافتحه مرة أخرى، وإذا استمرت المشكلة تواصل مع الدعم.', textAlign: TextAlign.center),
+                const SizedBox(height: 12),
+                SelectableText(error.toString(), style: const TextStyle(fontSize: 11, color: Colors.grey)),
+              ]),
+            ),
+          ),
+        ),
+      );
 }

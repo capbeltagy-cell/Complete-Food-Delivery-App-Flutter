@@ -34,8 +34,10 @@ class _AskDierbPageState extends State<AskDierbPage> {
     try {
       final result = await repo.publishedPosts(const LocationRef(cityId: LaunchLocationDefaults.cityId), const PageRequest(), type: filter);
       if (mounted) setState(() { page = result; loading = false; });
-    } catch (_) {
-      if (mounted) setState(() { loading = false; error = 'تعذر تحميل الأسئلة الآن. حاول مرة أخرى.'; });
+    } on FirebaseException catch (exception) {
+      if (mounted) setState(() { loading = false; error = 'تعذر تحميل الأسئلة (${exception.code}). حاول مرة أخرى.'; });
+    } catch (exception) {
+      if (mounted) setState(() { loading = false; error = 'تعذر قراءة بيانات الأسئلة: $exception'; });
     }
   }
 

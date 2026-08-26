@@ -109,18 +109,27 @@ class FirestoreCommunityRepository implements CommunityRepository {
 
   @override
   Future<PageResult<CommunityPost>> publishedPosts(LocationRef location, PageRequest page, {CommunityPostType? type}) async {
-    Query<Map<String, dynamic>> query = firestore
-        .collection('communityPosts')
-        .where('cityId', isEqualTo: location.cityId)
-        .where('status', isEqualTo: CommunityContentStatus.published.name);
-    if (location.areaId != null) query = query.where('areaId', isEqualTo: location.areaId);
-    if (location.villageId != null) query = query.where('villageId', isEqualTo: location.villageId);
-    if (type != null) query = query.where('type', isEqualTo: type.name);
-    query = query.orderBy('sponsored', descending: true).orderBy('createdAt', descending: true).limit(page.limit);
-    if (page.cursor is DocumentSnapshot<Map<String, dynamic>>) query = query.startAfterDocument(page.cursor! as DocumentSnapshot<Map<String, dynamic>>);
+    Query<Map<String, dynamic>> query = firestore.collection('communityPosts')
+        .where('status', isEqualTo: CommunityContentStatus.published.name)
+        .limit(page.limit);
+    if (page.cursor is DocumentSnapshot<Map<String, dynamic>>) {
+      query = query.startAfterDocument(page.cursor! as DocumentSnapshot<Map<String, dynamic>>);
+    }
     final result = await query.get();
+    final posts = result.docs
+        .map((doc) => CommunityPost.fromMap(doc.id, doc.data()))
+        .where((post) =>
+            post.cityId == location.cityId &&
+            (location.areaId == null || post.areaId == location.areaId) &&
+            (location.villageId == null || post.villageId == location.villageId) &&
+            (type == null || post.type == type))
+        .toList(growable: false)
+      ..sort((a, b) {
+        if (a.sponsored != b.sponsored) return a.sponsored ? -1 : 1;
+        return b.createdAt.compareTo(a.createdAt);
+      });
     return PageResult<CommunityPost>(
-      items: result.docs.map((doc) => CommunityPost.fromMap(doc.id, doc.data())).toList(growable: false),
+      items: posts,
       nextCursor: result.docs.isEmpty ? null : result.docs.last,
       hasMore: result.docs.length == page.limit,
     );
