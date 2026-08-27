@@ -28,10 +28,17 @@ class _AuthScreenState extends State<AuthScreen> {
     try {
       UserCredential credential;
       if (register) {
-        credential = await FirebaseAuth.instance.createUserWithEmailAndPassword(email: email.text.trim(), password: password.text);
-        await credential.user!.updateDisplayName(name.text.trim());
-        final uid = credential.user!.uid;
-        final userRef = FirebaseFirestore.instance.collection('users').doc(uid);
+        credential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
+          email: email.text.trim(),
+          password: password.text,
+        );
+        final user = credential.user!;
+        await user.updateDisplayName(name.text.trim());
+        final uid = user.uid;
+        final db = FirebaseFirestore.instance;
+        final now = FieldValue.serverTimestamp();
+
+        final userRef = db.collection('users').doc(uid);
         if (!(await userRef.get()).exists) {
           await userRef.set({
             'uid': uid,
@@ -42,11 +49,12 @@ class _AuthScreenState extends State<AuthScreen> {
             'photoUrl': '',
             'status': 'active',
             'cityId': 'dierb-nigm',
-            'createdAt': FieldValue.serverTimestamp(),
+            'createdAt': now,
             'updatedAt': FieldValue.serverTimestamp(),
           });
         }
-        await FirebaseFirestore.instance.collection('merchantApplications').doc(uid).set({
+
+        await db.collection('merchantApplications').doc(uid).set({
           'userId': uid,
           'email': email.text.trim(),
           'name': name.text.trim(),
@@ -55,21 +63,61 @@ class _AuthScreenState extends State<AuthScreen> {
           'status': 'pending',
           'createdAt': FieldValue.serverTimestamp(),
           'updatedAt': FieldValue.serverTimestamp(),
-        }, SetOptions(merge: true));
+        });
+
+        // Create the merchant's store immediately in pending state. This lets
+        // the admin approval synchronize the application and store in one action.
+        await db.collection('stores').doc(uid).set({
+          'ownerId': uid,
+          'name': name.text.trim(),
+          'description': '',
+          'phone': phone.text.trim(),
+          'whatsapp': phone.text.trim(),
+          'address': '',
+          'openingHours': '',
+          'logo': '',
+          'cover': '',
+          'categoryId': 'general',
+          'cityId': 'dierb-nigm',
+          'areaId': '',
+          'villageId': '',
+          'latitude': 0,
+          'longitude': 0,
+          'isOpen': false,
+          'deliveryEnabled': true,
+          'pickupEnabled': true,
+          'deliveryZones': <String>[],
+          'minimumOrder': 0,
+          'deliveryFee': 0,
+          'verified': false,
+          'featured': false,
+          'status': 'pending',
+          'createdAt': FieldValue.serverTimestamp(),
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
       } else {
-        credential = await FirebaseAuth.instance.signInWithEmailAndPassword(email: email.text.trim(), password: password.text);
+        credential = await FirebaseAuth.instance.signInWithEmailAndPassword(
+          email: email.text.trim(),
+          password: password.text,
+        );
       }
       final user = credential.user!;
       await sharedPreferences?.setString('uid', user.uid);
       await sharedPreferences?.setString('email', user.email ?? '');
       await sharedPreferences?.setString('name', user.displayName ?? name.text.trim());
-      if (mounted) Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (_) => const HomeScreen()), (_) => false);
+      if (mounted) {
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (_) => const HomeScreen()),
+          (_) => false,
+        );
+      }
     } on FirebaseAuthException catch (e) {
-      setState(() { loading = false; error = _authError(e.code); });
+      if (mounted) setState(() { loading = false; error = _authError(e.code); });
     } on FirebaseException catch (e) {
-      setState(() { loading = false; error = 'تعذر تجهيز حساب التاجر (${e.code}).'; });
+      if (mounted) setState(() { loading = false; error = 'تعذر تجهيز حساب التاجر (${e.code}).'; });
     } catch (_) {
-      setState(() { loading = false; error = 'حصل خطأ غير متوقع. حاول مرة أخرى.'; });
+      if (mounted) setState(() { loading = false; error = 'حصل خطأ غير متوقع. حاول مرة أخرى.'; });
     }
   }
 
