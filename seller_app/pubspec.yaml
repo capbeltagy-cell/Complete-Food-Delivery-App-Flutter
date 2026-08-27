@@ -1,5 +1,5 @@
 name: seller_app
-description: A new Flutter project.
+description: Dierb merchant app.
 publish_to: 'none'
 version: 1.0.0+1
 
@@ -16,9 +16,9 @@ dependencies:
   firebase_auth: ^6.6.0
   cloud_firestore: ^6.9.0
   firebase_storage: ^13.5.0
-  image_picker: ^0.8.7+1
+  image_picker: ^0.8.9
   geolocator: ^9.0.2
-  geocoding: ^2.1.0
+  geocoding: ^5.0.0
   shared_preferences: ^2.1.0
   flutter_staggered_grid_view: ^0.4.1
   fluttertoast: ^10.0.0
