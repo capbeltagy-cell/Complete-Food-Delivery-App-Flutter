@@ -8,6 +8,6 @@ class NotYetDeliveredScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) => DierbRiderOrdersView(
         title: 'طلبات في الطريق',
-        statuses: const [OrderStatus.onTheWay.name],
+        statuses: [OrderStatus.onTheWay.name],
       );
 }
