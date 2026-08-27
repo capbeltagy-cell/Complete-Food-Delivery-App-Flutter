@@ -8,6 +8,6 @@ class ParcelInProgress extends StatelessWidget {
   @override
   Widget build(BuildContext context) => DierbRiderOrdersView(
         title: 'طلبات تم استلامها',
-        statuses: const [OrderStatus.pickedUpByRider.name],
+        statuses: [OrderStatus.pickedUpByRider.name],
       );
 }
