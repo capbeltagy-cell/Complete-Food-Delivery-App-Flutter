@@ -1,10 +1,6 @@
-import 'dart:io';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
 
 class MenusUploadScreen extends StatelessWidget {
   const MenusUploadScreen({super.key});
@@ -101,8 +97,7 @@ class _ProductEditorState extends State<_ProductEditor> {
   final salePrice = TextEditingController();
   final stock = TextEditingController(text: '0');
   final categoryId = TextEditingController(text: 'general');
-  XFile? picked;
-  String existingImage = '';
+  final imageUrl = TextEditingController();
   bool available = true;
   bool saving = false;
 
@@ -121,20 +116,8 @@ class _ProductEditorState extends State<_ProductEditor> {
       categoryId.text = data['categoryId']?.toString() ?? 'general';
       available = data['available'] == true;
       final images = (data['images'] as List?)?.map((e) => e.toString()).toList() ?? const <String>[];
-      existingImage = images.isEmpty ? '' : images.first;
+      imageUrl.text = images.isEmpty ? '' : images.first;
     }
-  }
-
-  Future<void> _pickImage() async {
-    final file = await ImagePicker().pickImage(source: ImageSource.gallery, maxWidth: 1400, imageQuality: 82);
-    if (file != null && mounted) setState(() => picked = file);
-  }
-
-  Future<String> _upload(String productId) async {
-    if (picked == null) return existingImage;
-    final ref = FirebaseStorage.instance.ref().child('products/$uid/$productId.jpg');
-    await ref.putFile(File(picked!.path));
-    return ref.getDownloadURL();
   }
 
   Future<void> _save() async {
@@ -146,11 +129,11 @@ class _ProductEditorState extends State<_ProductEditor> {
     setState(() => saving = true);
     final ref = widget.existing?.reference ?? FirebaseFirestore.instance.collection('products').doc();
     try {
-      final imageUrl = await _upload(ref.id);
+      final image = imageUrl.text.trim();
       final payload = <String, dynamic>{
         'name': name.text.trim(),
         'description': description.text.trim(),
-        'images': imageUrl.isEmpty ? <String>[] : <String>[imageUrl],
+        'images': image.isEmpty ? <String>[] : <String>[image],
         'price': parsedPrice,
         'salePrice': double.tryParse(salePrice.text.trim()) ?? 0,
         'stock': int.tryParse(stock.text.trim()) ?? 0,
@@ -183,15 +166,25 @@ class _ProductEditorState extends State<_ProductEditor> {
 
   @override
   Widget build(BuildContext context) {
-    final preview = picked != null
-        ? Image.file(File(picked!.path), fit: BoxFit.cover)
-        : existingImage.isNotEmpty
-            ? Image.network(existingImage, fit: BoxFit.cover, errorBuilder: (_, __, ___) => const Icon(Icons.broken_image_outlined, size: 50))
-            : const Icon(Icons.add_photo_alternate_outlined, size: 58, color: Color(0xFF166534));
+    final previewUrl = imageUrl.text.trim();
     return Scaffold(
       appBar: AppBar(title: Text(widget.existing == null ? 'إضافة منتج' : 'تعديل المنتج', style: const TextStyle(fontWeight: FontWeight.w900))),
       body: ListView(padding: const EdgeInsets.all(16), children: [
-        InkWell(onTap: _pickImage, borderRadius: BorderRadius.circular(18), child: Container(height: 190, clipBehavior: Clip.antiAlias, decoration: BoxDecoration(color: const Color(0xFFEFF6EE), borderRadius: BorderRadius.circular(18)), child: Center(child: preview))),
+        Container(
+          height: 180,
+          clipBehavior: Clip.antiAlias,
+          decoration: BoxDecoration(color: const Color(0xFFEFF6EE), borderRadius: BorderRadius.circular(18)),
+          child: previewUrl.isEmpty
+              ? const Center(child: Icon(Icons.image_outlined, size: 58, color: Color(0xFF166534)))
+              : Image.network(previewUrl, fit: BoxFit.cover, errorBuilder: (_, __, ___) => const Center(child: Icon(Icons.broken_image_outlined, size: 54))),
+        ),
+        const SizedBox(height: 10),
+        TextField(
+          controller: imageUrl,
+          onChanged: (_) => setState(() {}),
+          keyboardType: TextInputType.url,
+          decoration: const InputDecoration(labelText: 'رابط صورة المنتج (اختياري)', hintText: 'https://...', border: OutlineInputBorder(), helperText: 'رفع الصور المباشر مؤجل حاليًا؛ المنتج يُحفظ ويعمل بدون صورة.'),
+        ),
         const SizedBox(height: 14),
         TextField(controller: name, decoration: const InputDecoration(labelText: 'اسم المنتج', border: OutlineInputBorder())),
         const SizedBox(height: 10),
