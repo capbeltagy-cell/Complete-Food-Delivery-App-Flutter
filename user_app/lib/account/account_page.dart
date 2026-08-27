@@ -40,19 +40,13 @@ class _GuestAccount extends StatelessWidget {
 }
 
 Future<void> _showAuth(BuildContext context, {required bool register}) async {
-  await showModalBottomSheet<void>(
-    context: context,
-    isScrollControlled: true,
-    useSafeArea: true,
-    builder: (_) => _AuthSheet(register: register),
-  );
+  await showModalBottomSheet<void>(context: context, isScrollControlled: true, useSafeArea: true, builder: (_) => _AuthSheet(register: register));
 }
 
 class _AuthSheet extends StatefulWidget {
   const _AuthSheet({required this.register});
   final bool register;
-  @override
-  State<_AuthSheet> createState() => _AuthSheetState();
+  @override State<_AuthSheet> createState() => _AuthSheetState();
 }
 
 class _AuthSheetState extends State<_AuthSheet> {
@@ -65,11 +59,7 @@ class _AuthSheetState extends State<_AuthSheet> {
   bool saving = false;
   String? error;
 
-  @override
-  void initState() {
-    super.initState();
-    register = widget.register;
-  }
+  @override void initState() { super.initState(); register = widget.register; }
 
   Future<void> submit() async {
     if (email.text.trim().isEmpty || password.text.length < 6 || (register && name.text.trim().isEmpty)) {
@@ -79,9 +69,7 @@ class _AuthSheetState extends State<_AuthSheet> {
     setState(() { saving = true; error = null; });
     try {
       if (register) {
-        final credential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
-          email: email.text.trim(), password: password.text,
-        );
+        final credential = await FirebaseAuth.instance.createUserWithEmailAndPassword(email: email.text.trim(), password: password.text);
         await credential.user!.updateDisplayName(name.text.trim());
         await FirebaseFirestore.instance.collection('users').doc(credential.user!.uid).set({
           'uid': credential.user!.uid,
@@ -106,26 +94,23 @@ class _AuthSheetState extends State<_AuthSheet> {
     }
   }
 
-  @override
-  Widget build(BuildContext context) => Padding(
+  @override Widget build(BuildContext context) => Padding(
         padding: EdgeInsets.fromLTRB(20, 18, 20, MediaQuery.viewInsetsOf(context).bottom + 20),
-        child: SingleChildScrollView(
-          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            Text(register ? 'إنشاء حساب' : 'تسجيل الدخول', style: const TextStyle(fontSize: 23, fontWeight: FontWeight.w900)),
-            const SizedBox(height: 16),
-            if (register) ...[
-              TextField(controller: name, textInputAction: TextInputAction.next, decoration: const InputDecoration(labelText: 'الاسم', prefixIcon: Icon(Icons.person_outline))),
-              TextField(controller: phone, keyboardType: TextInputType.phone, textInputAction: TextInputAction.next, decoration: const InputDecoration(labelText: 'رقم الهاتف', prefixIcon: Icon(Icons.phone_outlined))),
-              TextField(controller: address, textInputAction: TextInputAction.next, decoration: const InputDecoration(labelText: 'العنوان', prefixIcon: Icon(Icons.location_on_outlined))),
-            ],
-            TextField(controller: email, keyboardType: TextInputType.emailAddress, textInputAction: TextInputAction.next, decoration: const InputDecoration(labelText: 'البريد الإلكتروني', prefixIcon: Icon(Icons.email_outlined))),
-            TextField(controller: password, obscureText: true, onSubmitted: (_) => submit(), decoration: const InputDecoration(labelText: 'كلمة المرور', prefixIcon: Icon(Icons.lock_outline))),
-            if (error != null) Padding(padding: const EdgeInsets.only(top: 12), child: Text(error!, style: TextStyle(color: Theme.of(context).colorScheme.error))),
-            const SizedBox(height: 18),
-            FilledButton(onPressed: saving ? null : submit, child: saving ? const SizedBox.square(dimension: 20, child: CircularProgressIndicator(strokeWidth: 2)) : Text(register ? 'إنشاء الحساب' : 'دخول')),
-            TextButton(onPressed: saving ? null : () => setState(() { register = !register; error = null; }), child: Text(register ? 'عندي حساب بالفعل' : 'إنشاء حساب جديد')),
-          ]),
-        ),
+        child: SingleChildScrollView(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          Text(register ? 'إنشاء حساب' : 'تسجيل الدخول', style: const TextStyle(fontSize: 23, fontWeight: FontWeight.w900)),
+          const SizedBox(height: 16),
+          if (register) ...[
+            TextField(controller: name, textInputAction: TextInputAction.next, decoration: const InputDecoration(labelText: 'الاسم', prefixIcon: Icon(Icons.person_outline))),
+            TextField(controller: phone, keyboardType: TextInputType.phone, textInputAction: TextInputAction.next, decoration: const InputDecoration(labelText: 'رقم الهاتف', prefixIcon: Icon(Icons.phone_outlined))),
+            TextField(controller: address, textInputAction: TextInputAction.next, decoration: const InputDecoration(labelText: 'العنوان', prefixIcon: Icon(Icons.location_on_outlined))),
+          ],
+          TextField(controller: email, keyboardType: TextInputType.emailAddress, textInputAction: TextInputAction.next, decoration: const InputDecoration(labelText: 'البريد الإلكتروني', prefixIcon: Icon(Icons.email_outlined))),
+          TextField(controller: password, obscureText: true, onSubmitted: (_) => submit(), decoration: const InputDecoration(labelText: 'كلمة المرور', prefixIcon: Icon(Icons.lock_outline))),
+          if (error != null) Padding(padding: const EdgeInsets.only(top: 12), child: Text(error!, style: TextStyle(color: Theme.of(context).colorScheme.error))),
+          const SizedBox(height: 18),
+          FilledButton(onPressed: saving ? null : submit, child: saving ? const SizedBox.square(dimension: 20, child: CircularProgressIndicator(strokeWidth: 2)) : Text(register ? 'إنشاء الحساب' : 'دخول')),
+          TextButton(onPressed: saving ? null : () => setState(() { register = !register; error = null; }), child: Text(register ? 'عندي حساب بالفعل' : 'إنشاء حساب جديد')),
+        ])),
       );
 }
 
@@ -140,8 +125,7 @@ class _SignedInAccount extends StatelessWidget {
   const _SignedInAccount({required this.user});
   final User user;
 
-  @override
-  Widget build(BuildContext context) => StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+  @override Widget build(BuildContext context) => StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
         stream: FirebaseFirestore.instance.collection('users').doc(user.uid).snapshots(),
         builder: (context, snapshot) {
           final data = snapshot.data?.data() ?? <String, dynamic>{};
@@ -188,17 +172,59 @@ Future<void> _editProfile(BuildContext context, User user, Map<String, dynamic> 
 }
 
 Future<void> _merchantApplication(BuildContext context, User user, Map<String, dynamic> profile) async {
-  final ref = FirebaseFirestore.instance.collection('merchantApplications').doc(user.uid);
-  final existing = await ref.get();
+  final db = FirebaseFirestore.instance;
+  final applicationRef = db.collection('merchantApplications').doc(user.uid);
+  final existing = await applicationRef.get();
   if (existing.exists) {
     final status = existing.data()?['status']?.toString() ?? 'pending';
     if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('حالة طلب التاجر: $status')));
     return;
   }
-  await ref.set({
-    'userId': user.uid, 'email': user.email, 'name': profile['name'] ?? user.displayName ?? '',
-    'phone': profile['phone'] ?? '', 'cityId': 'dierb-nigm', 'status': 'pending',
-    'createdAt': FieldValue.serverTimestamp(), 'updatedAt': FieldValue.serverTimestamp(),
+
+  final merchantName = (profile['name'] ?? user.displayName ?? '').toString();
+  final merchantPhone = (profile['phone'] ?? '').toString();
+  await applicationRef.set({
+    'userId': user.uid,
+    'email': user.email,
+    'name': merchantName,
+    'phone': merchantPhone,
+    'cityId': 'dierb-nigm',
+    'status': 'pending',
+    'createdAt': FieldValue.serverTimestamp(),
+    'updatedAt': FieldValue.serverTimestamp(),
   });
+
+  final storeRef = db.collection('stores').doc(user.uid);
+  if (!(await storeRef.get()).exists) {
+    await storeRef.set({
+      'ownerId': user.uid,
+      'name': merchantName.isEmpty ? 'متجر ديرب' : merchantName,
+      'description': '',
+      'phone': merchantPhone,
+      'whatsapp': merchantPhone,
+      'address': (profile['address'] ?? '').toString(),
+      'openingHours': '',
+      'logo': '',
+      'cover': '',
+      'categoryId': 'general',
+      'cityId': 'dierb-nigm',
+      'areaId': '',
+      'villageId': '',
+      'latitude': 0,
+      'longitude': 0,
+      'isOpen': false,
+      'deliveryEnabled': true,
+      'pickupEnabled': true,
+      'deliveryZones': <String>[],
+      'minimumOrder': 0,
+      'deliveryFee': 0,
+      'verified': false,
+      'featured': false,
+      'status': 'pending',
+      'createdAt': FieldValue.serverTimestamp(),
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+  }
+
   if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم إرسال طلب التاجر للمراجعة.')));
 }
