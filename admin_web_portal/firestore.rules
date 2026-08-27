@@ -61,8 +61,13 @@ service cloud.firestore {
         || (isApprovedRider() && resource.data.riderUID == '' && resource.data.status == 'readyForPickup');
       allow update: if isAdmin()
         || (owns('sellerUID') && only(['status','updatedAt']))
-        || (owns('riderUID') && isApprovedRider() && only(['status','lat','lng','address','updatedAt']))
-        || (isApprovedRider() && resource.data.riderUID == '' && request.resource.data.riderUID == request.auth.uid && only(['riderUID','riderName','status','lat','lng','address','updatedAt']));
+        || (owns('riderUID') && isApprovedRider() && only(['status','lat','lng','address','pickedUpAt','onTheWayAt','deliveredAt','updatedAt']))
+        || (isApprovedRider()
+            && resource.data.riderUID == ''
+            && resource.data.status == 'readyForPickup'
+            && request.resource.data.riderUID == request.auth.uid
+            && request.resource.data.status == 'pickedUpByRider'
+            && only(['riderUID','riderName','status','lat','lng','address','pickedUpAt','updatedAt']));
     }
     match /categories/{id} { allow read: if resource.data.active == true || isAdmin(); allow write: if isAdmin(); }
     match /cities/{id} { allow read: if resource.data.active == true || isAdmin(); allow write: if isAdmin(); }
