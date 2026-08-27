@@ -3,6 +3,11 @@ service cloud.firestore {
   match /databases/{database}/documents {
     function signedIn() { return request.auth != null; }
     function isAdmin() { return signedIn() && (request.auth.token.admin == true || exists(/databases/$(database)/documents/admins/$(request.auth.uid))); }
+    function isApprovedRider() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/riders/$(request.auth.uid))
+        && get(/databases/$(database)/documents/riders/$(request.auth.uid)).data.status in ['approved', 'Approved'];
+    }
     function owns(field) { return signedIn() && resource.data[field] == request.auth.uid; }
     function createsOwn(field) { return signedIn() && request.resource.data[field] == request.auth.uid; }
     function only(fields) { return request.resource.data.diff(resource.data).changedKeys().hasOnly(fields); }
@@ -49,8 +54,15 @@ service cloud.firestore {
     }
     match /orders/{id} {
       allow create: if createsOwn('orderedBy') && request.resource.data.status in ['received','waitingMerchantApproval'];
-      allow read: if isAdmin() || owns('orderedBy') || owns('sellerUID') || owns('riderUID');
-      allow update: if isAdmin() || (owns('sellerUID') && only(['status','updatedAt'])) || (owns('riderUID') && only(['status','lat','lng','address','updatedAt'])) || (signedIn() && resource.data.riderUID == '' && request.resource.data.riderUID == request.auth.uid && only(['riderUID','riderName','status','lat','lng','address','updatedAt']));
+      allow read: if isAdmin()
+        || owns('orderedBy')
+        || owns('sellerUID')
+        || owns('riderUID')
+        || (isApprovedRider() && resource.data.riderUID == '' && resource.data.status == 'readyForPickup');
+      allow update: if isAdmin()
+        || (owns('sellerUID') && only(['status','updatedAt']))
+        || (owns('riderUID') && isApprovedRider() && only(['status','lat','lng','address','updatedAt']))
+        || (isApprovedRider() && resource.data.riderUID == '' && request.resource.data.riderUID == request.auth.uid && only(['riderUID','riderName','status','lat','lng','address','updatedAt']));
     }
     match /categories/{id} { allow read: if resource.data.active == true || isAdmin(); allow write: if isAdmin(); }
     match /cities/{id} { allow read: if resource.data.active == true || isAdmin(); allow write: if isAdmin(); }
