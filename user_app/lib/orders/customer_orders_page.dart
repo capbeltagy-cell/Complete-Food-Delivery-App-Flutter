@@ -28,7 +28,7 @@ class _CustomerOrdersPageState extends State<CustomerOrdersPage> {
                   segments: const [
                     ButtonSegment(value: _OrderFilter.active, label: Text('الحالية')),
                     ButtonSegment(value: _OrderFilter.completed, label: Text('المكتملة')),
-                    ButtonSegment(value: _OrderFilter.cancelled, label: Text('الملغية')),
+                    ButtonSegment(value: _OrderFilter.cancelled, label: Text('الملغية/المرفوضة')),
                   ],
                   selected: {filter}, onSelectionChanged: (value) => setState(() => filter = value.first),
                 )),
@@ -57,8 +57,8 @@ class _CustomerOrdersPageState extends State<CustomerOrdersPage> {
   bool _matches(Map<String, dynamic> data) {
     final status = OrderStatusCodec.fromStorage(data['status']?.toString());
     if (filter == _OrderFilter.completed) return status == OrderStatus.delivered;
-    if (filter == _OrderFilter.cancelled) return status == OrderStatus.cancelled;
-    return status != OrderStatus.delivered && status != OrderStatus.cancelled;
+    if (filter == _OrderFilter.cancelled) return status == OrderStatus.cancelled || status == OrderStatus.rejected;
+    return status != OrderStatus.delivered && status != OrderStatus.cancelled && status != OrderStatus.rejected;
   }
 }
 
@@ -99,7 +99,7 @@ class _OrderCard extends StatelessWidget {
       ListTile(leading: const Icon(Icons.location_on_outlined), title: const Text('عنوان التوصيل'), subtitle: Text((data['addressText'] ?? data['address'] ?? data['addressId'] ?? 'غير محدد').toString())),
       if ((data['notes'] ?? '').toString().isNotEmpty) ListTile(leading: const Icon(Icons.notes_rounded), title: const Text('ملاحظات'), subtitle: Text(data['notes'].toString())),
       const Text('المنتجات', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 17)),
-      if (items.isEmpty) const Padding(padding: EdgeInsets.symmetric(vertical: 12), child: Text('تفاصيل المنتجات محفوظة بالنظام القديم لهذا الطلب.')),
+      if (items.isEmpty) const Padding(padding: EdgeInsets.symmetric(vertical: 12), child: Text('تفاصيل المنتجات غير متاحة لهذا الطلب.')),
       ...items.map((item) => ListTile(title: Text((item['name'] ?? 'منتج').toString()), subtitle: Text('الكمية: ${item['quantity'] ?? 1}'), trailing: Text('${item['price'] ?? 0} ج.م'))),
       const Divider(),
       ListTile(title: const Text('الإجمالي', style: TextStyle(fontWeight: FontWeight.w900)), trailing: Text('${data['total'] ?? data['totolAmmount'] ?? 0} ج.م', style: const TextStyle(fontWeight: FontWeight.w900))),
@@ -113,6 +113,7 @@ class _Timeline extends StatelessWidget {
   @override Widget build(BuildContext context) {
     const flow = [OrderStatus.received, OrderStatus.waitingMerchantApproval, OrderStatus.accepted, OrderStatus.preparing, OrderStatus.readyForPickup, OrderStatus.pickedUpByRider, OrderStatus.onTheWay, OrderStatus.delivered];
     if (current == OrderStatus.cancelled) return const ListTile(leading: Icon(Icons.cancel_rounded, color: Colors.red), title: Text('ملغي', style: TextStyle(color: Colors.red, fontWeight: FontWeight.w900)));
+    if (current == OrderStatus.rejected) return const ListTile(leading: Icon(Icons.block_rounded, color: Colors.red), title: Text('رفض المتجر الطلب', style: TextStyle(color: Colors.red, fontWeight: FontWeight.w900)));
     final currentIndex = flow.indexOf(current);
     return Column(children: List.generate(flow.length, (index) => Row(children: [
       Icon(index <= currentIndex ? Icons.check_circle_rounded : Icons.radio_button_unchecked, color: index <= currentIndex ? const Color(0xFF166534) : Colors.grey),
@@ -123,7 +124,7 @@ class _Timeline extends StatelessWidget {
 
 IconData _statusIcon(OrderStatus status) {
   if (status == OrderStatus.delivered) return Icons.check_circle_outline;
-  if (status == OrderStatus.cancelled) return Icons.cancel_outlined;
+  if (status == OrderStatus.cancelled || status == OrderStatus.rejected) return Icons.cancel_outlined;
   if (status == OrderStatus.onTheWay || status == OrderStatus.pickedUpByRider) return Icons.delivery_dining;
   return Icons.schedule_rounded;
 }
