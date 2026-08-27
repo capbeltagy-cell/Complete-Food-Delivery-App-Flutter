@@ -8,6 +8,6 @@ class HistoryScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) => DierbRiderOrdersView(
         title: 'سجل التوصيل',
-        statuses: const [OrderStatus.delivered.name, OrderStatus.cancelled.name],
+        statuses: [OrderStatus.delivered.name, OrderStatus.cancelled.name],
       );
 }
