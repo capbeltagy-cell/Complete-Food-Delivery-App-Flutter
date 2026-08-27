@@ -20,7 +20,9 @@ class DierbRiderOrdersView extends StatelessWidget {
   Query<Map<String, dynamic>> _query() {
     final base = FirebaseFirestore.instance.collection('orders');
     if (availableOrders) {
-      return base.where('status', isEqualTo: OrderStatus.readyForPickup.name);
+      return base
+          .where('status', isEqualTo: OrderStatus.readyForPickup.name)
+          .where('riderUID', isEqualTo: '');
     }
     return base
         .where('riderUID', isEqualTo: riderId)
@@ -89,11 +91,7 @@ class DierbRiderOrdersView extends StatelessWidget {
             return const Center(child: Text('تعذر تحميل الطلبات الآن'));
           }
           if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
-          final docs = snapshot.data!.docs.where((doc) {
-            if (!availableOrders) return true;
-            final assigned = doc.data()['riderUID']?.toString() ?? '';
-            return assigned.isEmpty || assigned == riderId;
-          }).toList()
+          final docs = snapshot.data!.docs.toList()
             ..sort((a, b) {
               final at = a.data()['createdAt'];
               final bt = b.data()['createdAt'];
