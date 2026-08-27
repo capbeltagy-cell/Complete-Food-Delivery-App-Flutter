@@ -11,6 +11,13 @@ service cloud.firestore {
     function owns(field) { return signedIn() && resource.data[field] == request.auth.uid; }
     function createsOwn(field) { return signedIn() && request.resource.data[field] == request.auth.uid; }
     function only(fields) { return request.resource.data.diff(resource.data).changedKeys().hasOnly(fields); }
+    function validOrderStore() {
+      return request.resource.data.storeId is string
+        && request.resource.data.sellerUID is string
+        && exists(/databases/$(database)/documents/stores/$(request.resource.data.storeId))
+        && get(/databases/$(database)/documents/stores/$(request.resource.data.storeId)).data.status == 'approved'
+        && get(/databases/$(database)/documents/stores/$(request.resource.data.storeId)).data.ownerId == request.resource.data.sellerUID;
+    }
 
     match /admins/{uid} { allow read: if signedIn() && request.auth.uid == uid; allow write: if false; }
     match /users/{uid} {
@@ -53,7 +60,10 @@ service cloud.firestore {
       allow delete: if isAdmin() || owns('ownerId');
     }
     match /orders/{id} {
-      allow create: if createsOwn('orderedBy') && request.resource.data.status in ['received','waitingMerchantApproval'];
+      allow create: if createsOwn('orderedBy')
+        && request.resource.data.status in ['received','waitingMerchantApproval']
+        && request.resource.data.riderUID == ''
+        && validOrderStore();
       allow read: if isAdmin()
         || owns('orderedBy')
         || owns('sellerUID')
