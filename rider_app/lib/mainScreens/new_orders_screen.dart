@@ -8,7 +8,7 @@ class NewOrdersScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) => DierbRiderOrdersView(
         title: 'طلبات توصيل متاحة',
-        statuses: const [OrderStatus.readyForPickup.name],
+        statuses: [OrderStatus.readyForPickup.name],
         availableOrders: true,
       );
 }
