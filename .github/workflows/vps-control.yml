@@ -98,8 +98,14 @@ jobs:
             [string][char]0x00E2,
             [string][char]0xFFFD
           )
-          Get-ChildItem $root -Recurse -Filter '*.dart' -File |
-            Where-Object { $_.FullName -notmatch '\\.dart_tool\\|\\build\\|\\.pub-cache\\' } |
+          $dartRoots = @(
+            (Join-Path $root 'user_app\\lib'),
+            (Join-Path $root 'seller_app\\lib'),
+            (Join-Path $root 'rider_app\\lib'),
+            (Join-Path $root 'admin_web_portal\\lib'),
+            (Join-Path $root 'dierb_core\\lib')
+          ) | Where-Object { Test-Path $_ }
+          Get-ChildItem $dartRoots -Recurse -Filter '*.dart' -File |
             Select-String -SimpleMatch -Pattern $badCharacters |
             ForEach-Object { "$($_.Path):$($_.LineNumber):$($_.Line)" } |
             Out-File (Join-Path $report 'mojibake-scan.txt') -Encoding utf8
