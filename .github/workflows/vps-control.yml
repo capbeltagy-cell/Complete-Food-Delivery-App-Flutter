@@ -55,13 +55,16 @@ jobs:
             'C:\\DierbTools\\Git\\cmd\\git.exe'
           )
           $git = $gitCandidates | Where-Object { Test-Path $_ } | Select-Object -First 1
-          if (-not $git) { throw 'git.exe was not found in the known VPS tool locations' }
-          & $git status --short --branch | Tee-Object (Join-Path $report 'git-status.txt')
-          & $git log -20 --date=iso --pretty=format:'%H%x09%ad%x09%s' | Out-File (Join-Path $report 'git-log.txt') -Encoding utf8
-          & $git remote -v | Out-File (Join-Path $report 'git-remotes.txt') -Encoding utf8
-          & $git diff --stat | Out-File (Join-Path $report 'diff-stat.txt') -Encoding utf8
-          & $git diff -- . ':(exclude)**/google-services.json' ':(exclude)**/firebase_options.dart' | Out-File (Join-Path $report 'working-tree.patch') -Encoding utf8
-          & $git ls-files --others --exclude-standard | Out-File (Join-Path $report 'untracked-files.txt') -Encoding utf8
+          if ($git) {
+            & $git status --short --branch | Tee-Object (Join-Path $report 'git-status.txt')
+            & $git log -20 --date=iso --pretty=format:'%H%x09%ad%x09%s' | Out-File (Join-Path $report 'git-log.txt') -Encoding utf8
+            & $git remote -v | Out-File (Join-Path $report 'git-remotes.txt') -Encoding utf8
+            & $git diff --stat | Out-File (Join-Path $report 'diff-stat.txt') -Encoding utf8
+            & $git diff -- . ':(exclude)**/google-services.json' ':(exclude)**/firebase_options.dart' | Out-File (Join-Path $report 'working-tree.patch') -Encoding utf8
+            & $git ls-files --others --exclude-standard | Out-File (Join-Path $report 'untracked-files.txt') -Encoding utf8
+          } else {
+            'git.exe not installed or not visible to runner service' | Out-File (Join-Path $report 'git-unavailable.txt') -Encoding utf8
+          }
 
           $known = @(
             'user_app/lib/commerce/store_details_page.dart',
@@ -89,6 +92,7 @@ jobs:
 
           $badPattern = 'Ã|Â|Ø|Ù|â€|ï¿½|�'
           Get-ChildItem $root -Recurse -Filter '*.dart' -File |
+            Where-Object { $_.FullName -notmatch '\\\\.dart_tool\\\\|\\\\build\\\\|\\\\.pub-cache\\\\' } |
             Select-String -Pattern $badPattern |
             ForEach-Object { "$($_.Path):$($_.LineNumber):$($_.Line)" } |
             Out-File (Join-Path $report 'mojibake-scan.txt') -Encoding utf8
