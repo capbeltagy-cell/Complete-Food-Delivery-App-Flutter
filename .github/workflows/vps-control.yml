@@ -150,6 +150,27 @@ jobs:
           "Authoritative VPS project remained read-only and unchanged." >> $env:GITHUB_STEP_SUMMARY
           $global:LASTEXITCODE = 0
 
+      - name: Overlay branch fixes onto protected working copy
+        if: ${{ github.event_name == 'push' || inputs.task == 'repair_arabic' || inputs.task == 'analyze' || inputs.task == 'build_customer' || inputs.task == 'build_all' || inputs.task == 'full_verify' }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $root = $env:DIERB_WORK_ROOT
+          $revision = $env:GITHUB_SHA
+          $paths = @(
+            'user_app/lib/commerce/store_details_page.dart',
+            'user_app/lib/main.dart',
+            'seller_app/lib/uploadScreens.dart/menus_upload_screen.dart',
+            'seller_app/lib/main.dart',
+            'rider_app/lib/main.dart'
+          )
+          foreach ($relative in $paths) {
+            $urlPath = $relative -replace '\\', '/'
+            $url = "https://raw.githubusercontent.com/capbeltagy-cell/Complete-Food-Delivery-App-Flutter/$revision/$urlPath"
+            $target = Join-Path $root $relative
+            Invoke-WebRequest -Uri $url -OutFile $target -UseBasicParsing
+          }
+          Write-Host "Overlayed $($paths.Count) branch files onto protected working copy."
+
       - name: Repair Arabic encoding with rollback backup
         if: ${{ github.event_name == 'push' || inputs.task == 'repair_arabic' || inputs.task == 'full_verify' }}
         run: |
