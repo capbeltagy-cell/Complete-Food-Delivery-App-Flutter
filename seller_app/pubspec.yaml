@@ -17,6 +17,7 @@ dependencies:
   cloud_firestore: ^6.9.0
   firebase_storage: ^13.5.0
   image_picker: ^0.8.9
+  http: ^1.2.2
   geolocator: ^9.0.2
   geocoding: ^4.0.0
   shared_preferences: ^2.1.0
