@@ -6,41 +6,98 @@ on:
       task:
         description: Task to run on the Windows VPS
         required: true
-        default: status
+        default: inventory
         type: choice
         options:
-          - status
+          - inventory
           - analyze
           - build_customer
           - build_all
+  push:
+    branches:
+      - dierb-super-app
+    paths:
+      - .github/workflows/vps-control.yml
 
 permissions:
   contents: read
 
+concurrency:
+  group: dierb-vps-control
+  cancel-in-progress: false
+
 jobs:
   vps:
     runs-on: [self-hosted, Windows, X64]
-    timeout-minutes: 60
+    timeout-minutes: 90
     defaults:
       run:
         shell: powershell
 
     steps:
-      - name: VPS status
+      - name: VPS inventory and safe source snapshot
         run: |
           $ErrorActionPreference = 'Stop'
           $root = 'C:\DierbPlatform\Dierb-FINAL'
+          $report = Join-Path $env:RUNNER_TEMP 'dierb-vps-inventory'
+          if (-not (Test-Path $root)) { throw "Project folder not found: $root" }
+          if (Test-Path $report) { Remove-Item $report -Recurse -Force }
+          New-Item $report -ItemType Directory | Out-Null
+
           Write-Host "Runner user: $env:USERNAME"
           Write-Host "Computer: $env:COMPUTERNAME"
           Write-Host "Project: $root"
-          if (-not (Test-Path $root)) { throw "Project folder not found: $root" }
-          Get-ChildItem $root | Select-Object Name, LastWriteTime
-          & 'C:\DierbTools\flutter\bin\flutter.bat' --version
-          & 'C:\Program Files\nodejs\node.exe' --version
-          & 'C:\Program Files\nodejs\npm.cmd' --version
+          Set-Location $root
+          git status --short --branch | Tee-Object (Join-Path $report 'git-status.txt')
+          git log -20 --date=iso --pretty=format:'%H%x09%ad%x09%s' | Out-File (Join-Path $report 'git-log.txt') -Encoding utf8
+          git remote -v | Out-File (Join-Path $report 'git-remotes.txt') -Encoding utf8
+          git diff --stat | Out-File (Join-Path $report 'diff-stat.txt') -Encoding utf8
+          git diff -- . ':(exclude)**/google-services.json' ':(exclude)**/firebase_options.dart' | Out-File (Join-Path $report 'working-tree.patch') -Encoding utf8
+          git ls-files --others --exclude-standard | Out-File (Join-Path $report 'untracked-files.txt') -Encoding utf8
+
+          $known = @(
+            'user_app/lib/commerce/store_details_page.dart',
+            'user_app/lib/main.dart',
+            'seller_app/lib/uploadScreens.dart/menus_upload_screen.dart',
+            'seller_app/lib/main.dart',
+            'rider_app/lib/main.dart'
+          )
+          $sourceRoot = Join-Path $report 'current-source'
+          $cleanRoot = Join-Path $report 'clean-reference'
+          foreach ($relative in $known) {
+            $current = Join-Path $root $relative
+            if (Test-Path $current) {
+              $target = Join-Path $sourceRoot $relative
+              New-Item (Split-Path $target) -ItemType Directory -Force | Out-Null
+              Copy-Item $current $target
+            }
+            $clean = Join-Path 'C:\DierbPlatform\clean-arabic-source' $relative
+            if (Test-Path $clean) {
+              $target = Join-Path $cleanRoot $relative
+              New-Item (Split-Path $target) -ItemType Directory -Force | Out-Null
+              Copy-Item $clean $target
+            }
+          }
+
+          $badPattern = 'Ã|Â|Ø|Ù|â€|ï¿½|�'
+          Get-ChildItem $root -Recurse -Filter '*.dart' -File |
+            Select-String -Pattern $badPattern |
+            ForEach-Object { "$($_.Path):$($_.LineNumber):$($_.Line)" } |
+            Out-File (Join-Path $report 'mojibake-scan.txt') -Encoding utf8
+
+          & 'C:\DierbTools\flutter\bin\flutter.bat' --version | Out-File (Join-Path $report 'flutter-version.txt') -Encoding utf8
           & 'C:\Program Files\Eclipse Adoptium\jdk-17.0.20.101-hotspot\bin\java.exe' -version
-          "## VPS connected" >> $env:GITHUB_STEP_SUMMARY
-          "Project path: ``$root``" >> $env:GITHUB_STEP_SUMMARY
+          "## VPS inventory captured" >> $env:GITHUB_STEP_SUMMARY
+          "Project path: `$root`" >> $env:GITHUB_STEP_SUMMARY
+          "Branch and working tree were inspected without checkout, pull, reset, or clean." >> $env:GITHUB_STEP_SUMMARY
+
+      - name: Upload VPS inventory
+        uses: actions/upload-artifact@v4
+        with:
+          name: Dierb-VPS-Inventory
+          path: ${{ runner.temp }}\dierb-vps-inventory
+          if-no-files-found: error
+          retention-days: 7
 
       - name: Analyze Flutter apps
         if: ${{ inputs.task == 'analyze' || inputs.task == 'build_all' }}
