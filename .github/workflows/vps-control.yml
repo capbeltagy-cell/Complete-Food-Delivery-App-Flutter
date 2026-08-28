@@ -13,6 +13,8 @@ on:
           - analyze
           - build_customer
           - build_all
+          - repair_arabic
+          - full_verify
   push:
     branches:
       - dierb-super-app
@@ -123,8 +125,107 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
+      - name: Repair Arabic encoding with rollback backup
+        if: ${{ github.event_name == 'push' || inputs.task == 'repair_arabic' || inputs.task == 'full_verify' }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $root = 'C:\DierbPlatform\Dierb-FINAL'
+          $stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
+          $backup = Join-Path 'C:\DierbPlatform\encoding-backups' $stamp
+          New-Item $backup -ItemType Directory -Force | Out-Null
+          $dartRoots = @(
+            (Join-Path $root 'user_app\lib'),
+            (Join-Path $root 'seller_app\lib'),
+            (Join-Path $root 'rider_app\lib'),
+            (Join-Path $root 'admin_web_portal\lib'),
+            (Join-Path $root 'dierb_core\lib')
+          ) | Where-Object { Test-Path $_ }
+          $markers = [char[]]@([char]0x00C3, [char]0x00C2, [char]0x00D8, [char]0x00D9, [char]0x00E2, [char]0xFFFD)
+          $latin1 = [Text.Encoding]::GetEncoding(28591)
+          $utf8Strict = New-Object Text.UTF8Encoding($false, $true)
+          $utf8NoBom = New-Object Text.UTF8Encoding($false)
+          $changed = New-Object System.Collections.Generic.List[string]
+
+          foreach ($file in Get-ChildItem $dartRoots -Recurse -Filter '*.dart' -File) {
+            $text = [IO.File]::ReadAllText($file.FullName, [Text.Encoding]::UTF8)
+            $lines = $text -split "\r?\n", 0, 'SimpleMatch'
+            $didChange = $false
+            for ($i = 0; $i -lt $lines.Count; $i++) {
+              if ($lines[$i].IndexOfAny($markers) -lt 0) { continue }
+              try {
+                $decoded = $utf8Strict.GetString($latin1.GetBytes($lines[$i]))
+                if ($decoded -ne $lines[$i] -and $decoded.IndexOf([char]0xFFFD) -lt 0) {
+                  $lines[$i] = $decoded
+                  $didChange = $true
+                }
+              } catch {
+                Write-Warning "Could not automatically repair $($file.FullName):$($i + 1)"
+              }
+            }
+            if ($didChange) {
+              $relative = $file.FullName.Substring($root.Length).TrimStart('\')
+              $backupFile = Join-Path $backup $relative
+              New-Item (Split-Path $backupFile) -ItemType Directory -Force | Out-Null
+              Copy-Item $file.FullName $backupFile
+              [IO.File]::WriteAllText($file.FullName, ($lines -join [Environment]::NewLine), $utf8NoBom)
+              $changed.Add($relative)
+            }
+          }
+
+          $remaining = New-Object System.Collections.Generic.List[string]
+          foreach ($file in Get-ChildItem $dartRoots -Recurse -Filter '*.dart' -File) {
+            $lineNumber = 0
+            foreach ($line in [IO.File]::ReadLines($file.FullName, [Text.Encoding]::UTF8)) {
+              $lineNumber++
+              if ($line.IndexOfAny($markers) -ge 0) {
+                $remaining.Add("$($file.FullName):$lineNumber:$line")
+              }
+            }
+          }
+          $changed | Out-File (Join-Path $env:RUNNER_TEMP 'arabic-repaired-files.txt') -Encoding utf8
+          $remaining | Out-File (Join-Path $env:RUNNER_TEMP 'arabic-remaining.txt') -Encoding utf8
+          Write-Host "Repaired Dart files: $($changed.Count)"
+          if ($remaining.Count -gt 0) {
+            $remaining | Select-Object -First 100 | Write-Host
+            throw "Arabic encoding verification failed: $($remaining.Count) suspicious lines remain"
+          }
+          "## Arabic encoding verified" >> $env:GITHUB_STEP_SUMMARY
+          "Repaired files: $($changed.Count); remaining suspicious lines: 0" >> $env:GITHUB_STEP_SUMMARY
+
+      - name: Capture repaired source
+        if: ${{ github.event_name == 'push' || inputs.task == 'repair_arabic' || inputs.task == 'full_verify' }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $root = 'C:\DierbPlatform\Dierb-FINAL'
+          $out = Join-Path $env:RUNNER_TEMP 'dierb-repaired-source'
+          New-Item $out -ItemType Directory -Force | Out-Null
+          $known = @(
+            'user_app/lib/commerce/store_details_page.dart',
+            'user_app/lib/main.dart',
+            'seller_app/lib/uploadScreens.dart/menus_upload_screen.dart',
+            'seller_app/lib/main.dart',
+            'rider_app/lib/main.dart'
+          )
+          foreach ($relative in $known) {
+            $source = Join-Path $root $relative
+            $target = Join-Path $out $relative
+            New-Item (Split-Path $target) -ItemType Directory -Force | Out-Null
+            Copy-Item $source $target
+          }
+          Copy-Item (Join-Path $env:RUNNER_TEMP 'arabic-repaired-files.txt') $out
+          Copy-Item (Join-Path $env:RUNNER_TEMP 'arabic-remaining.txt') $out
+
+      - name: Upload repaired source checkpoint
+        if: ${{ github.event_name == 'push' || inputs.task == 'repair_arabic' || inputs.task == 'full_verify' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: Dierb-Repaired-Arabic-Source
+          path: ${{ runner.temp }}\dierb-repaired-source
+          if-no-files-found: error
+          retention-days: 7
+
       - name: Analyze Flutter apps
-        if: ${{ inputs.task == 'analyze' || inputs.task == 'build_all' }}
+        if: ${{ github.event_name == 'push' || inputs.task == 'analyze' || inputs.task == 'build_all' || inputs.task == 'full_verify' }}
         run: |
           $ErrorActionPreference = 'Stop'
           $flutter = 'C:\DierbTools\flutter\bin\flutter.bat'
