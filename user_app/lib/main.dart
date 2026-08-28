@@ -8,6 +8,7 @@ import 'package:user_app/assistant_methods/total_ammount.dart';
 import 'package:user_app/dierb/app_shell.dart';
 import 'global/global.dart';
 import 'commerce/cart_controller.dart';
+import 'design/dierb_theme.dart';
 
 const dierbFirebaseOptions = FirebaseOptions(
   apiKey: 'AIzaSyBVUGFEPhyNrFwkMjEuV4PGk7EEQS_CQ5I',
@@ -47,15 +48,7 @@ class MyApp extends StatelessWidget {
       child: MaterialApp(
         title: 'ديرب',
         debugShowCheckedModeBanner: false,
-        theme: ThemeData(
-          useMaterial3: true,
-          colorScheme: ColorScheme.fromSeed(
-            seedColor: const Color(0xFF166534),
-            brightness: Brightness.light,
-          ),
-          scaffoldBackgroundColor: const Color(0xFFF7F8F5),
-          fontFamily: 'Kiwi',
-        ),
+        theme: DierbTheme.light(),
         builder: (context, child) => Directionality(
           textDirection: TextDirection.rtl,
           child: child!,

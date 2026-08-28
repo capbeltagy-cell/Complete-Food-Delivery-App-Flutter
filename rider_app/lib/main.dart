@@ -4,6 +4,7 @@ import 'package:rider_app/splashScreen/splash_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'global/global.dart';
+import 'design/dierb_theme.dart';
 
 const _dierbFirebase = FirebaseOptions(
   apiKey: 'AIzaSyBVUGFEPhyNrFwkMjEuV4PGk7EEQS_CQ5I',
@@ -28,12 +29,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'ديرب للمندوبين',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF166534)),
-        scaffoldBackgroundColor: const Color(0xFFF7F8F5),
-        inputDecorationTheme: const InputDecorationTheme(filled: true, fillColor: Colors.white),
-      ),
+      theme: DierbTheme.light(),
       builder: (context, child) => Directionality(
         textDirection: TextDirection.rtl,
         child: child ?? const SizedBox.shrink(),
