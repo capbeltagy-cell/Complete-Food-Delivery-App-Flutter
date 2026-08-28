@@ -1,10 +1,11 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:rider_app/splashScreen/splash_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'global/global.dart';
 import 'design/dierb_theme.dart';
+import 'global/global.dart';
 
 const _dierbFirebase = FirebaseOptions(
   apiKey: 'AIzaSyBVUGFEPhyNrFwkMjEuV4PGk7EEQS_CQ5I',
@@ -18,6 +19,7 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   sharedPreferences = await SharedPreferences.getInstance();
   await Firebase.initializeApp(options: _dierbFirebase);
+  firebaseAuth = FirebaseAuth.instance;
   runApp(const MyApp());
 }
 
@@ -38,5 +40,3 @@ class MyApp extends StatelessWidget {
     );
   }
 }
-
-
