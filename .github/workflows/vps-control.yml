@@ -1,0 +1,93 @@
+name: Dierb VPS Control
+
+on:
+  workflow_dispatch:
+    inputs:
+      task:
+        description: Task to run on the Windows VPS
+        required: true
+        default: status
+        type: choice
+        options:
+          - status
+          - analyze
+          - build_customer
+          - build_all
+
+permissions:
+  contents: read
+
+jobs:
+  vps:
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 60
+    defaults:
+      run:
+        shell: powershell
+
+    steps:
+      - name: VPS status
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $root = 'C:\DierbPlatform\Dierb-FINAL'
+          Write-Host "Runner user: $env:USERNAME"
+          Write-Host "Computer: $env:COMPUTERNAME"
+          Write-Host "Project: $root"
+          if (-not (Test-Path $root)) { throw "Project folder not found: $root" }
+          Get-ChildItem $root | Select-Object Name, LastWriteTime
+          & 'C:\DierbTools\flutter\bin\flutter.bat' --version
+          & 'C:\Program Files\nodejs\node.exe' --version
+          & 'C:\Program Files\nodejs\npm.cmd' --version
+          & 'C:\Program Files\Eclipse Adoptium\jdk-17.0.20.101-hotspot\bin\java.exe' -version
+          "## VPS connected" >> $env:GITHUB_STEP_SUMMARY
+          "Project path: ``$root``" >> $env:GITHUB_STEP_SUMMARY
+
+      - name: Analyze Flutter apps
+        if: ${{ inputs.task == 'analyze' || inputs.task == 'build_all' }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $flutter = 'C:\DierbTools\flutter\bin\flutter.bat'
+          $root = 'C:\DierbPlatform\Dierb-FINAL'
+          foreach ($app in @('user_app','seller_app','rider_app')) {
+            Write-Host "===== ANALYZE $app ====="
+            Set-Location (Join-Path $root $app)
+            & $flutter pub get
+            if ($LASTEXITCODE -ne 0) { throw "pub get failed: $app" }
+            & $flutter analyze --no-fatal-infos --no-fatal-warnings
+            if ($LASTEXITCODE -ne 0) { throw "analyze failed: $app" }
+          }
+
+      - name: Build customer APK
+        if: ${{ inputs.task == 'build_customer' }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $flutter = 'C:\DierbTools\flutter\bin\flutter.bat'
+          $root = 'C:\DierbPlatform\Dierb-FINAL'
+          Set-Location (Join-Path $root 'user_app')
+          & $flutter pub get
+          if ($LASTEXITCODE -ne 0) { throw 'pub get failed' }
+          & $flutter build apk --release
+          if ($LASTEXITCODE -ne 0) { throw 'customer build failed' }
+          Copy-Item '.\build\app\outputs\flutter-apk\app-release.apk' (Join-Path $root 'FinalApps\Dierb-Customer.apk') -Force
+
+      - name: Build all APKs
+        if: ${{ inputs.task == 'build_all' }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $flutter = 'C:\DierbTools\flutter\bin\flutter.bat'
+          $root = 'C:\DierbPlatform\Dierb-FINAL'
+          $apps = @(
+            @{ dir='user_app'; out='Dierb-Customer.apk' },
+            @{ dir='seller_app'; out='Dierb-Merchant.apk' },
+            @{ dir='rider_app'; out='Dierb-Rider.apk' }
+          )
+          foreach ($app in $apps) {
+            Write-Host "===== BUILD $($app.dir) ====="
+            Set-Location (Join-Path $root $app.dir)
+            & $flutter pub get
+            if ($LASTEXITCODE -ne 0) { throw "pub get failed: $($app.dir)" }
+            & $flutter build apk --release
+            if ($LASTEXITCODE -ne 0) { throw "build failed: $($app.dir)" }
+            Copy-Item '.\build\app\outputs\flutter-apk\app-release.apk' (Join-Path $root "FinalApps\$($app.out)") -Force
+          }
+          Get-ChildItem (Join-Path $root 'FinalApps') -Filter '*.apk' | Select-Object Name, Length, LastWriteTime
