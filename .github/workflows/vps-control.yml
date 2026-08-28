@@ -73,7 +73,10 @@ jobs:
             'user_app/lib/main.dart',
             'seller_app/lib/uploadScreens.dart/menus_upload_screen.dart',
             'seller_app/lib/main.dart',
-            'rider_app/lib/main.dart'
+            'rider_app/lib/main.dart',
+            'seller_app/lib/mainScreens/new_orders_screen.dart',
+            'user_app/lib/mainScreens/my_orders_screen.dart',
+            'user_app/lib/orders/customer_orders_page.dart'
           )
           $sourceRoot = Join-Path $report 'current-source'
           $cleanRoot = Join-Path $report 'clean-reference'
