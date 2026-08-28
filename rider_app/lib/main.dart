@@ -1,11 +1,10 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:rider_app/splashScreen/splash_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'design/dierb_theme.dart';
 import 'global/global.dart';
+import 'design/dierb_theme.dart';
 
 const _dierbFirebase = FirebaseOptions(
   apiKey: 'AIzaSyBVUGFEPhyNrFwkMjEuV4PGk7EEQS_CQ5I',
@@ -17,14 +16,24 @@ const _dierbFirebase = FirebaseOptions(
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  sharedPreferences = await SharedPreferences.getInstance();
-  await Firebase.initializeApp(options: _dierbFirebase);
-  firebaseAuth = FirebaseAuth.instance;
-  runApp(const MyApp());
+
+  Object? startupError;
+  try {
+    sharedPreferences = await SharedPreferences.getInstance();
+    if (Firebase.apps.isEmpty) {
+      await Firebase.initializeApp(options: _dierbFirebase);
+    }
+  } catch (error) {
+    startupError = error;
+  }
+
+  runApp(MyApp(startupError: startupError));
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  const MyApp({super.key, this.startupError});
+
+  final Object? startupError;
 
   @override
   Widget build(BuildContext context) {
@@ -36,7 +45,55 @@ class MyApp extends StatelessWidget {
         textDirection: TextDirection.rtl,
         child: child ?? const SizedBox.shrink(),
       ),
-      home: const MySplashScreen(),
+      home: startupError == null
+          ? const MySplashScreen()
+          : RiderStartupError(error: startupError!),
+    );
+  }
+}
+
+class RiderStartupError extends StatelessWidget {
+  const RiderStartupError({super.key, required this.error});
+
+  final Object error;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: SafeArea(
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.error_outline_rounded,
+                  size: 64,
+                  color: Theme.of(context).colorScheme.error,
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'تعذر تشغيل ديرب للمندوبين',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900),
+                ),
+                const SizedBox(height: 10),
+                const Text(
+                  'ظهر خطأ أثناء تهيئة التطبيق. انسخ الرسالة الموجودة بالأسفل وأرسلها للإدارة.',
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 14),
+                SelectableText(
+                  error.toString(),
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontSize: 11, color: Colors.grey),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
