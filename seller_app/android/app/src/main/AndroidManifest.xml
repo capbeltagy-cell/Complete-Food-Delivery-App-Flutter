@@ -5,7 +5,8 @@
     <application
         android:label="ديرب للتجار"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:usesCleartextTraffic="true">
         <activity
             android:name="com.example.seller_app.MainActivity"
             android:exported="true"
