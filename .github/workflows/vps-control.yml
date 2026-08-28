@@ -110,7 +110,6 @@ jobs:
             ForEach-Object { "$($_.Path):$($_.LineNumber):$($_.Line)" } |
             Out-File (Join-Path $report 'mojibake-scan.txt') -Encoding utf8
 
-          & 'C:\DierbTools\flutter\bin\flutter.bat' --version | Out-File (Join-Path $report 'flutter-version.txt') -Encoding utf8
           & 'C:\Program Files\Eclipse Adoptium\jdk-17.0.20.101-hotspot\bin\java.exe' -version
           "## VPS inventory captured" >> $env:GITHUB_STEP_SUMMARY
           "Project path: $root" >> $env:GITHUB_STEP_SUMMARY
