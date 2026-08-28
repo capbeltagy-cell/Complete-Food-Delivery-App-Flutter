@@ -88,7 +88,7 @@ jobs:
           & 'C:\DierbTools\flutter\bin\flutter.bat' --version | Out-File (Join-Path $report 'flutter-version.txt') -Encoding utf8
           & 'C:\Program Files\Eclipse Adoptium\jdk-17.0.20.101-hotspot\bin\java.exe' -version
           "## VPS inventory captured" >> $env:GITHUB_STEP_SUMMARY
-          "Project path: `$root`" >> $env:GITHUB_STEP_SUMMARY
+          "Project path: $root" >> $env:GITHUB_STEP_SUMMARY
           "Branch and working tree were inspected without checkout, pull, reset, or clean." >> $env:GITHUB_STEP_SUMMARY
 
       - name: Upload VPS inventory
