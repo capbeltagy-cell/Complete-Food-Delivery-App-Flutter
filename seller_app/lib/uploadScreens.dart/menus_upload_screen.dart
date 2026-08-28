@@ -1,3 +1,6 @@
+import 'package:image_picker/image_picker.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -101,6 +104,13 @@ class _ProductEditorState extends State<_ProductEditor> {
   bool available = true;
   bool saving = false;
 
+  XFile? pickedImage;
+  final ImagePicker _imagePicker = ImagePicker();
+  bool uploadingImage = false;
+  String? imageUploadError;
+
+  static final Uri _uploadEndpoint = Uri.parse('http://169.58.246.131:8091/upload');
+
   String get uid => FirebaseAuth.instance.currentUser?.uid ?? '';
 
   @override
@@ -120,7 +130,95 @@ class _ProductEditorState extends State<_ProductEditor> {
     }
   }
 
+  @override
+  void dispose() {
+    name.dispose();
+    description.dispose();
+    price.dispose();
+    salePrice.dispose();
+    stock.dispose();
+    categoryId.dispose();
+    imageUrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _pickAndUploadImage() async {
+    try {
+      final XFile? selected = await _imagePicker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 82,
+        maxWidth: 1600,
+      );
+
+      if (selected == null) return;
+
+      setState(() {
+        pickedImage = selected;
+        uploadingImage = true;
+        imageUploadError = null;
+      });
+
+      final request = http.MultipartRequest('POST', _uploadEndpoint);
+
+      request.files.add(
+        http.MultipartFile.fromBytes(
+          'file',
+          await selected.readAsBytes(),
+          filename: selected.name,
+        ),
+      );
+
+      final response = await request.send().timeout(const Duration(seconds: 45));
+      final body = await response.stream.bytesToString();
+
+      if (response.statusCode != 200) {
+        throw Exception('Storage HTTP ${response.statusCode}');
+      }
+
+      final data = jsonDecode(body) as Map<String, dynamic>;
+
+      if (data['success'] != true || data['url'] == null || data['url'].toString().trim().isEmpty) {
+        throw Exception('Invalid storage response');
+      }
+
+      final returnedUrl = data['url'].toString().trim();
+      final uploadedUrl = returnedUrl.startsWith('http')
+          ? returnedUrl
+          : _uploadEndpoint.resolve(returnedUrl).toString();
+
+      if (!mounted) return;
+
+      setState(() {
+        imageUrl.text = uploadedUrl;
+        uploadingImage = false;
+        imageUploadError = null;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('تم رفع الصورة بنجاح'),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        uploadingImage = false;
+        imageUploadError = 'تعذر رفع الصورة. تأكد من الاتصال وحاول مرة أخرى.';
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('تعذر رفع الصورة: $e'),
+        ),
+      );
+    }
+  }
   Future<void> _save() async {
+    if (uploadingImage) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('انتظر حتى يكتمل رفع الصورة')));
+      return;
+    }
     final parsedPrice = double.tryParse(price.text.trim());
     if (name.text.trim().isEmpty || parsedPrice == null || parsedPrice < 0) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('اكتب اسم وسعر صحيح للمنتج')));
@@ -129,6 +227,15 @@ class _ProductEditorState extends State<_ProductEditor> {
     setState(() => saving = true);
     final ref = widget.existing?.reference ?? FirebaseFirestore.instance.collection('products').doc();
     try {
+      final stores = await FirebaseFirestore.instance.collection('stores').where('ownerId', isEqualTo: uid).limit(1).get();
+      if (stores.docs.isEmpty) {
+        throw StateError('لا يوجد متجر مرتبط بهذا الحساب. أكمل طلب التاجر وانتظر موافقة الإدارة.');
+      }
+      final storeDocument = stores.docs.first;
+      final store = storeDocument.data();
+      if (store['status']?.toString() != 'approved') {
+        throw StateError('المتجر لم تتم الموافقة عليه بعد.');
+      }
       final image = imageUrl.text.trim();
       final payload = <String, dynamic>{
         'name': name.text.trim(),
@@ -148,8 +255,10 @@ class _ProductEditorState extends State<_ProductEditor> {
           ...payload,
           'productId': ref.id,
           'ownerId': uid,
-          'storeId': uid,
-          'cityId': 'dierb-nigm',
+          'storeId': storeDocument.id,
+          'cityId': store['cityId']?.toString() ?? '',
+          'areaId': store['areaId']?.toString() ?? '',
+          'villageId': store['villageId']?.toString() ?? '',
           'featured': false,
           'createdAt': FieldValue.serverTimestamp(),
         });
@@ -159,6 +268,8 @@ class _ProductEditorState extends State<_ProductEditor> {
       if (mounted) Navigator.pop(context);
     } on FirebaseException catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر حفظ المنتج: ${e.code}')));
+    } on StateError catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
     } finally {
       if (mounted) setState(() => saving = false);
     }
@@ -179,12 +290,40 @@ class _ProductEditorState extends State<_ProductEditor> {
               : Image.network(previewUrl, fit: BoxFit.cover, errorBuilder: (_, __, ___) => const Center(child: Icon(Icons.broken_image_outlined, size: 54))),
         ),
         const SizedBox(height: 10),
-        TextField(
-          controller: imageUrl,
-          onChanged: (_) => setState(() {}),
-          keyboardType: TextInputType.url,
-          decoration: const InputDecoration(labelText: 'رابط صورة المنتج (اختياري)', hintText: 'https://...', border: OutlineInputBorder(), helperText: 'رفع الصور المباشر مؤجل حاليًا؛ المنتج يُحفظ ويعمل بدون صورة.'),
-        ),
+          FilledButton.icon(
+            onPressed: uploadingImage ? null : _pickAndUploadImage,
+            icon: uploadingImage
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.add_photo_alternate_outlined),
+            label: Text(
+              uploadingImage ? 'جارٍ رفع الصورة...' : 'اختيار ورفع صورة المنتج',
+            ),
+          ),
+          if (imageUrl.text.trim().isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Row(
+                children: const [
+                  Icon(Icons.check_circle, color: Colors.green),
+                  SizedBox(width: 6),
+                  Text('تم رفع الصورة وحفظها على سيرفر ديرب'),
+                ],
+              ),
+            ),
+          if (imageUploadError != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Row(children: [
+                const Icon(Icons.error_outline_rounded, color: Colors.red),
+                const SizedBox(width: 6),
+                Expanded(child: Text(imageUploadError!, style: const TextStyle(color: Colors.red))),
+                TextButton(onPressed: pickedImage == null || uploadingImage ? null : _pickAndUploadImage, child: const Text('إعادة المحاولة')),
+              ]),
+            ),
         const SizedBox(height: 14),
         TextField(controller: name, decoration: const InputDecoration(labelText: 'اسم المنتج', border: OutlineInputBorder())),
         const SizedBox(height: 10),
@@ -203,7 +342,7 @@ class _ProductEditorState extends State<_ProductEditor> {
         ]),
         SwitchListTile(value: available, onChanged: (v) => setState(() => available = v), title: const Text('المنتج متاح للعملاء')),
         const SizedBox(height: 12),
-        FilledButton.icon(onPressed: saving ? null : _save, icon: const Icon(Icons.save_outlined), label: Text(saving ? 'جاري الحفظ...' : 'حفظ المنتج')),
+        FilledButton.icon(onPressed: saving || uploadingImage ? null : _save, icon: const Icon(Icons.save_outlined), label: Text(saving ? 'جاري الحفظ...' : 'حفظ المنتج')),
       ]),
     );
   }

@@ -7,7 +7,7 @@ import 'global/global.dart';
 
 const _dierbFirebase = FirebaseOptions(
   apiKey: 'AIzaSyBVUGFEPhyNrFwkMjEuV4PGk7EEQS_CQ5I',
-  appId: '1:365123606367:android:82969f06df11aba2b8c8ea',
+  appId: '1:365123606367:android:e7077cf997d916cab8c8ea',
   messagingSenderId: '365123606367',
   projectId: 'dierb-29548',
   storageBucket: 'dierb-29548.firebasestorage.app',
@@ -42,3 +42,5 @@ class MyApp extends StatelessWidget {
     );
   }
 }
+
+

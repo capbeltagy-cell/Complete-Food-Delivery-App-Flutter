@@ -1,5 +1,4 @@
 import 'package:firebase_core/firebase_core.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -10,18 +9,25 @@ import 'package:user_app/dierb/app_shell.dart';
 import 'global/global.dart';
 import 'commerce/cart_controller.dart';
 
+const dierbFirebaseOptions = FirebaseOptions(
+  apiKey: 'AIzaSyBVUGFEPhyNrFwkMjEuV4PGk7EEQS_CQ5I',
+  appId: '1:365123606367:android:82969f06df11aba2b8c8ea',
+  messagingSenderId: '365123606367',
+  projectId: 'dierb-29548',
+  authDomain: 'dierb-29548.firebaseapp.com',
+  storageBucket: 'dierb-29548.firebasestorage.app',
+);
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   sharedPreferences = await SharedPreferences.getInstance();
   Object? firebaseStartupError;
-  if (!kIsWeb) {
-    try {
-      await Firebase.initializeApp();
-    } catch (error) {
-      firebaseStartupError = error;
+  try {
+    if (Firebase.apps.isEmpty) {
+      await Firebase.initializeApp(options: dierbFirebaseOptions);
     }
-  } else {
-    firebaseStartupError = StateError('Firebase Web configuration is not installed.');
+  } catch (error) {
+    firebaseStartupError = error;
   }
   runApp(MyApp(firebaseStartupError: firebaseStartupError));
 }
@@ -85,3 +91,8 @@ class FirebaseStartupError extends StatelessWidget {
         ),
       );
 }
+
+
+
+
+
