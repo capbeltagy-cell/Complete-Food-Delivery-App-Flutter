@@ -178,7 +178,7 @@ jobs:
             foreach ($line in [IO.File]::ReadLines($file.FullName, [Text.Encoding]::UTF8)) {
               $lineNumber++
               if ($line.IndexOfAny($markers) -ge 0) {
-                $remaining.Add("$($file.FullName):$lineNumber:$line")
+                $remaining.Add("$($file.FullName):${lineNumber}:$line")
               }
             }
           }
