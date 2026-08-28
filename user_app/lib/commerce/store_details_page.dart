@@ -12,6 +12,69 @@ class StoreDetailsPage extends StatelessWidget {
   final String storeId;
   final Map<String, dynamic> store;
 
+  bool _addToCart(BuildContext context, Store parsed, Product product) {
+    final ownerId = parsed.ownerId.isNotEmpty ? parsed.ownerId : storeId;
+    final added = context.read<CartController>().add(
+          targetStoreId: storeId,
+          targetMerchantId: ownerId,
+          targetStoreName: parsed.name,
+          line: CartLine(
+            productId: product.id,
+            name: product.name,
+            price: product.effectivePrice,
+            quantity: 1,
+            image: product.images.isEmpty ? '' : product.images.first,
+          ),
+        );
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(added ? 'تمت الإضافة للسلة' : 'أكمل طلب المتجر الحالي أو امسح السلة أولًا')),
+    );
+    return added;
+  }
+
+  Future<void> _showProduct(BuildContext context, Store parsed, Product product) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (sheetContext) => Padding(
+        padding: const EdgeInsets.fromLTRB(18, 12, 18, 22),
+        child: SingleChildScrollView(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            Center(child: Container(width: 44, height: 4, decoration: BoxDecoration(color: Colors.black26, borderRadius: BorderRadius.circular(4)))),
+            const SizedBox(height: 16),
+            Container(
+              height: 230,
+              clipBehavior: Clip.antiAlias,
+              decoration: BoxDecoration(color: const Color(0xFFEFF6EE), borderRadius: BorderRadius.circular(20)),
+              child: product.images.isEmpty
+                  ? const Icon(Icons.inventory_2_outlined, size: 72, color: Color(0xFF166534))
+                  : Image.network(product.images.first, fit: BoxFit.cover, errorBuilder: (_, __, ___) => const Icon(Icons.broken_image_outlined, size: 64)),
+            ),
+            const SizedBox(height: 16),
+            Text(product.name, style: const TextStyle(fontSize: 23, fontWeight: FontWeight.w900)),
+            if (product.description.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Text(product.description, style: const TextStyle(fontSize: 15, height: 1.55)),
+            ],
+            const SizedBox(height: 14),
+            Text('${product.effectivePrice.toStringAsFixed(2)} ج.م', style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w900, color: Color(0xFF166534))),
+            const SizedBox(height: 18),
+            FilledButton.icon(
+              onPressed: !parsed.isOpen
+                  ? null
+                  : () {
+                      if (_addToCart(context, parsed, product)) Navigator.pop(sheetContext);
+                    },
+              icon: const Icon(Icons.add_shopping_cart_rounded),
+              label: Text(parsed.isOpen ? 'إضافة للسلة' : 'المتجر مغلق حاليًا'),
+            ),
+          ]),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final parsed = Store.fromMap(storeId, store);
@@ -103,26 +166,7 @@ class StoreDetailsPage extends StatelessWidget {
                         Text('${product.effectivePrice.toStringAsFixed(2)} ج.م', style: const TextStyle(fontWeight: FontWeight.w900)),
                         const Icon(Icons.add_circle_rounded, color: Color(0xFF166534)),
                       ]),
-                      onTap: !isOpen
-                          ? () => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('المتجر مغلق حاليًا')))
-                          : () {
-                              final ownerId = parsed.ownerId.isNotEmpty ? parsed.ownerId : storeId;
-                              final added = context.read<CartController>().add(
-                                    targetStoreId: storeId,
-                                    targetMerchantId: ownerId,
-                                    targetStoreName: parsed.name,
-                                    line: CartLine(
-                                      productId: product.id,
-                                      name: product.name,
-                                      price: product.effectivePrice,
-                                      quantity: 1,
-                                      image: product.images.isEmpty ? '' : product.images.first,
-                                    ),
-                                  );
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text(added ? 'تمت الإضافة للسلة' : 'أكمل طلب المتجر الحالي أو امسح السلة أولًا')),
-                              );
-                            },
+                      onTap: () => _showProduct(context, parsed, product),
                     ),
                   );
                 },
