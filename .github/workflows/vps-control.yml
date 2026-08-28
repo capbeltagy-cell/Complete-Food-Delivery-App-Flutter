@@ -138,7 +138,7 @@ jobs:
             $source = Join-Path $sourceRoot $project
             if (-not (Test-Path $source)) { continue }
             $target = Join-Path $workRoot $project
-            & robocopy $source $target /E /R:1 /W:1 /XD build .dart_tool .gradle node_modules .git /XF '*.jks' '*.keystore' key.properties '.env' 'service-account*.json' | Out-Host
+            & robocopy $source $target /E /R:1 /W:1 /XJ /SL /XD build .dart_tool .gradle node_modules .git ephemeral /XF '*.jks' '*.keystore' key.properties '.env' 'service-account*.json' | Out-Host
             if ($LASTEXITCODE -gt 7) { throw "Working-copy failed for $project with robocopy code $LASTEXITCODE" }
           }
           foreach ($fileName in @('firestore.rules', 'firestore.indexes.json', 'firebase.json', 'storage.rules', 'pubspec.yaml', 'pubspec.lock')) {
