@@ -90,10 +90,17 @@ jobs:
             }
           }
 
-          $badPattern = 'Ã|Â|Ø|Ù|â€|ï¿½|�'
+          $badCharacters = @(
+            [string][char]0x00C3,
+            [string][char]0x00C2,
+            [string][char]0x00D8,
+            [string][char]0x00D9,
+            [string][char]0x00E2,
+            [string][char]0xFFFD
+          )
           Get-ChildItem $root -Recurse -Filter '*.dart' -File |
-            Where-Object { $_.FullName -notmatch '\\\\.dart_tool\\\\|\\\\build\\\\|\\\\.pub-cache\\\\' } |
-            Select-String -Pattern $badPattern |
+            Where-Object { $_.FullName -notmatch '\\.dart_tool\\|\\build\\|\\.pub-cache\\' } |
+            Select-String -SimpleMatch -Pattern $badCharacters |
             ForEach-Object { "$($_.Path):$($_.LineNumber):$($_.Line)" } |
             Out-File (Join-Path $report 'mojibake-scan.txt') -Encoding utf8
 
