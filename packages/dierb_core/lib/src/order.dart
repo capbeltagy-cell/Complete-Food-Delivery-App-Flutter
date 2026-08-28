@@ -1,15 +1,4 @@
-enum OrderStatus {
-  received,
-  waitingMerchantApproval,
-  accepted,
-  preparing,
-  readyForPickup,
-  pickedUpByRider,
-  onTheWay,
-  delivered,
-  rejected,
-  cancelled,
-}
+enum OrderStatus { received, waitingMerchantApproval, accepted, preparing, readyForPickup, pickedUpByRider, onTheWay, delivered, rejected, cancelled }
 
 extension OrderStatusText on OrderStatus {
   String get labelAr {
@@ -26,8 +15,8 @@ extension OrderStatusText on OrderStatus {
       case OrderStatus.cancelled: return 'ملغي';
     }
   }
-
   bool get isTerminal => this == OrderStatus.delivered || this == OrderStatus.rejected || this == OrderStatus.cancelled;
+  bool get isActive => !isTerminal;
 }
 
 abstract class OrderStatusCodec {
@@ -38,10 +27,8 @@ abstract class OrderStatusCodec {
       case 'picking': return OrderStatus.readyForPickup;
       case 'delivering': return OrderStatus.onTheWay;
       case 'ended': return OrderStatus.delivered;
-      default:
-        return OrderStatus.values.firstWhere((status) => status.name == raw, orElse: () => OrderStatus.received);
+      default: return OrderStatus.values.firstWhere((status) => status.name == raw, orElse: () => OrderStatus.received);
     }
   }
-
   static String toStorage(OrderStatus status) => status.name;
 }
