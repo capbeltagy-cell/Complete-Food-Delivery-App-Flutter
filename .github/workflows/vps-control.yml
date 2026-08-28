@@ -133,7 +133,7 @@ jobs:
           $workRoot = Join-Path $env:RUNNER_TEMP 'Dierb-FINAL-work'
           if (Test-Path $workRoot) { Remove-Item $workRoot -Recurse -Force }
           New-Item $workRoot -ItemType Directory -Force | Out-Null
-          $projects = @('user_app', 'seller_app', 'rider_app', 'admin_web_portal', 'dierb_core')
+          $projects = @('user_app', 'seller_app', 'rider_app', 'admin_web_portal', 'packages')
           foreach ($project in $projects) {
             $source = Join-Path $sourceRoot $project
             if (-not (Test-Path $source)) { continue }
@@ -163,7 +163,7 @@ jobs:
             (Join-Path $root 'seller_app\lib'),
             (Join-Path $root 'rider_app\lib'),
             (Join-Path $root 'admin_web_portal\lib'),
-            (Join-Path $root 'dierb_core\lib')
+            (Join-Path $root 'packages\dierb_core\lib')
           ) | Where-Object { Test-Path $_ }
           $markers = [char[]]@([char]0x00C3, [char]0x00C2, [char]0x00D8, [char]0x00D9, [char]0x00E2, [char]0xFFFD)
           $cp1252Reverse = @{
@@ -245,7 +245,7 @@ jobs:
           $root = $env:DIERB_WORK_ROOT
           $out = Join-Path $env:RUNNER_TEMP 'dierb-repaired-source'
           New-Item $out -ItemType Directory -Force | Out-Null
-          foreach ($project in @('user_app', 'seller_app', 'rider_app', 'admin_web_portal', 'dierb_core')) {
+          foreach ($project in @('user_app', 'seller_app', 'rider_app', 'admin_web_portal', 'packages')) {
             $source = Join-Path $root $project
             if (Test-Path $source) {
               Copy-Item $source (Join-Path $out $project) -Recurse -Force
