@@ -125,11 +125,35 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
+      - name: Create protected working copy from authoritative VPS
+        if: ${{ github.event_name == 'push' || inputs.task == 'repair_arabic' || inputs.task == 'analyze' || inputs.task == 'build_customer' || inputs.task == 'build_all' || inputs.task == 'full_verify' }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $sourceRoot = 'C:\DierbPlatform\Dierb-FINAL'
+          $workRoot = Join-Path $env:RUNNER_TEMP 'Dierb-FINAL-work'
+          if (Test-Path $workRoot) { Remove-Item $workRoot -Recurse -Force }
+          New-Item $workRoot -ItemType Directory -Force | Out-Null
+          $projects = @('user_app', 'seller_app', 'rider_app', 'admin_web_portal', 'dierb_core')
+          foreach ($project in $projects) {
+            $source = Join-Path $sourceRoot $project
+            if (-not (Test-Path $source)) { continue }
+            $target = Join-Path $workRoot $project
+            & robocopy $source $target /E /R:1 /W:1 /XD build .dart_tool .gradle node_modules .git /XF '*.jks' '*.keystore' key.properties '.env' 'service-account*.json' | Out-Host
+            if ($LASTEXITCODE -gt 7) { throw "Working-copy failed for $project with robocopy code $LASTEXITCODE" }
+          }
+          foreach ($fileName in @('firestore.rules', 'firestore.indexes.json', 'firebase.json', 'storage.rules', 'pubspec.yaml', 'pubspec.lock')) {
+            $source = Join-Path $sourceRoot $fileName
+            if (Test-Path $source) { Copy-Item $source (Join-Path $workRoot $fileName) -Force }
+          }
+          "DIERB_WORK_ROOT=$workRoot" >> $env:GITHUB_ENV
+          Write-Host "Protected working copy: $workRoot"
+          "Authoritative VPS project remained read-only and unchanged." >> $env:GITHUB_STEP_SUMMARY
+
       - name: Repair Arabic encoding with rollback backup
         if: ${{ github.event_name == 'push' || inputs.task == 'repair_arabic' || inputs.task == 'full_verify' }}
         run: |
           $ErrorActionPreference = 'Stop'
-          $root = 'C:\DierbPlatform\Dierb-FINAL'
+          $root = $env:DIERB_WORK_ROOT
           $stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
           $backup = Join-Path 'C:\DierbPlatform\encoding-backups' $stamp
           New-Item $backup -ItemType Directory -Force | Out-Null
@@ -217,21 +241,18 @@ jobs:
         if: ${{ github.event_name == 'push' || inputs.task == 'repair_arabic' || inputs.task == 'full_verify' }}
         run: |
           $ErrorActionPreference = 'Stop'
-          $root = 'C:\DierbPlatform\Dierb-FINAL'
+          $root = $env:DIERB_WORK_ROOT
           $out = Join-Path $env:RUNNER_TEMP 'dierb-repaired-source'
           New-Item $out -ItemType Directory -Force | Out-Null
-          $known = @(
-            'user_app/lib/commerce/store_details_page.dart',
-            'user_app/lib/main.dart',
-            'seller_app/lib/uploadScreens.dart/menus_upload_screen.dart',
-            'seller_app/lib/main.dart',
-            'rider_app/lib/main.dart'
-          )
-          foreach ($relative in $known) {
-            $source = Join-Path $root $relative
-            $target = Join-Path $out $relative
-            New-Item (Split-Path $target) -ItemType Directory -Force | Out-Null
-            Copy-Item $source $target
+          foreach ($project in @('user_app', 'seller_app', 'rider_app', 'admin_web_portal', 'dierb_core')) {
+            $source = Join-Path $root $project
+            if (Test-Path $source) {
+              Copy-Item $source (Join-Path $out $project) -Recurse -Force
+            }
+          }
+          foreach ($fileName in @('firestore.rules', 'firestore.indexes.json', 'firebase.json', 'storage.rules')) {
+            $source = Join-Path $root $fileName
+            if (Test-Path $source) { Copy-Item $source (Join-Path $out $fileName) -Force }
           }
           Copy-Item (Join-Path $env:RUNNER_TEMP 'arabic-repaired-files.txt') $out
           Copy-Item (Join-Path $env:RUNNER_TEMP 'arabic-remaining.txt') $out
@@ -250,7 +271,7 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
           $flutter = 'C:\DierbTools\flutter\bin\flutter.bat'
-          $root = 'C:\DierbPlatform\Dierb-FINAL'
+          $root = $env:DIERB_WORK_ROOT
           foreach ($app in @('user_app','seller_app','rider_app')) {
             Write-Host "===== ANALYZE $app ====="
             Set-Location (Join-Path $root $app)
@@ -265,7 +286,7 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
           $flutter = 'C:\DierbTools\flutter\bin\flutter.bat'
-          $root = 'C:\DierbPlatform\Dierb-FINAL'
+          $root = $env:DIERB_WORK_ROOT
           Set-Location (Join-Path $root 'user_app')
           & $flutter pub get
           if ($LASTEXITCODE -ne 0) { throw 'pub get failed' }
@@ -278,7 +299,7 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
           $flutter = 'C:\DierbTools\flutter\bin\flutter.bat'
-          $root = 'C:\DierbPlatform\Dierb-FINAL'
+          $root = $env:DIERB_WORK_ROOT
           $apps = @(
             @{ dir='user_app'; out='Dierb-Customer.apk' },
             @{ dir='seller_app'; out='Dierb-Merchant.apk' },
