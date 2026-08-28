@@ -270,6 +270,12 @@ class _ProductEditorState extends State<_ProductEditor> {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر حفظ المنتج: ${e.code}')));
     } on StateError catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('تعذر حفظ المنتج الآن. تأكد من الاتصال وحاول مرة أخرى.')),
+        );
+      }
     } finally {
       if (mounted) setState(() => saving = false);
     }
