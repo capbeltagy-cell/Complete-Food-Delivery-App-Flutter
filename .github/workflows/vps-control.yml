@@ -148,6 +148,7 @@ jobs:
           "DIERB_WORK_ROOT=$workRoot" >> $env:GITHUB_ENV
           Write-Host "Protected working copy: $workRoot"
           "Authoritative VPS project remained read-only and unchanged." >> $env:GITHUB_STEP_SUMMARY
+          $global:LASTEXITCODE = 0
 
       - name: Repair Arabic encoding with rollback backup
         if: ${{ github.event_name == 'push' || inputs.task == 'repair_arabic' || inputs.task == 'full_verify' }}
