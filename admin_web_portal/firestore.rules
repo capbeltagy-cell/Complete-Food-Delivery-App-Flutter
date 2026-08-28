@@ -27,7 +27,7 @@ service cloud.firestore {
         && get(/databases/$(database)/documents/stores/$(storeId)).data.status == 'approved';
     }
     function merchantOrderTransition() {
-      return (resource.data.status in ['received', 'waitingMerchantApproval'] && request.resource.data.status in ['accepted', 'cancelled'])
+      return (resource.data.status in ['received', 'waitingMerchantApproval'] && request.resource.data.status in ['accepted', 'rejected', 'cancelled'])
         || (resource.data.status == 'accepted' && request.resource.data.status in ['preparing', 'cancelled'])
         || (resource.data.status == 'preparing' && request.resource.data.status in ['readyForPickup', 'cancelled']);
     }

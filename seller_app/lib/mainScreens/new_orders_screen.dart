@@ -16,10 +16,7 @@ class NewOrdersScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('طلبات المتجر', style: TextStyle(fontWeight: FontWeight.w900))),
       body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-        stream: FirebaseFirestore.instance
-            .collection('orders')
-            .where('sellerUID', isEqualTo: merchantId)
-            .snapshots(),
+        stream: FirebaseFirestore.instance.collection('orders').where('sellerUID', isEqualTo: merchantId).snapshots(),
         builder: (context, snapshot) {
           if (snapshot.hasError) {
             return const _StateMessage(icon: Icons.cloud_off_rounded, title: 'تعذر تحميل الطلبات', subtitle: 'راجع الاتصال وحاول مرة أخرى.');
@@ -34,7 +31,11 @@ class NewOrdersScreen extends StatelessWidget {
               return bt.compareTo(at);
             });
           if (docs.isEmpty) {
-            return const _StateMessage(icon: Icons.receipt_long_outlined, title: 'لا توجد طلبات حتى الآن', subtitle: 'أول طلب من عميل ديرب سيظهر هنا مباشرة.');
+            return const _StateMessage(
+              icon: Icons.receipt_long_outlined,
+              title: 'لا توجد طلبات حتى الآن',
+              subtitle: 'أول طلب من عميل ديرب سيظهر هنا مباشرة.',
+            );
           }
           return ListView.separated(
             padding: const EdgeInsets.all(14),
@@ -52,10 +53,13 @@ class _OrderCard extends StatelessWidget {
   const _OrderCard({required this.doc});
   final QueryDocumentSnapshot<Map<String, dynamic>> doc;
 
-  Future<void> _setStatus(BuildContext context, String status) async {
+  Future<void> _setStatus(BuildContext context, OrderStatus status) async {
     try {
-      await doc.reference.update({'status': status, 'updatedAt': FieldValue.serverTimestamp()});
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم تحديث حالة الطلب')));
+      await doc.reference.update(<String, dynamic>{
+        'status': OrderStatusCodec.toStorage(status),
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(status.labelAr)));
     } on FirebaseException catch (e) {
       if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر تحديث الطلب: ${e.code}')));
     }
@@ -65,7 +69,7 @@ class _OrderCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final data = doc.data();
     final items = (data['items'] as List?)?.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList() ?? const <Map<String, dynamic>>[];
-    final status = data['status']?.toString() ?? OrderStatus.waitingMerchantApproval.name;
+    final status = OrderStatusCodec.fromStorage(data['status']);
     final total = (data['total'] as num?)?.toDouble() ?? 0;
     final customer = data['customerName']?.toString() ?? 'عميل ديرب';
     final phone = data['customerPhone']?.toString() ?? '';
@@ -76,7 +80,7 @@ class _OrderCard extends StatelessWidget {
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           Row(children: [
             Expanded(child: Text('طلب #${doc.id.substring(0, doc.id.length > 7 ? 7 : doc.id.length)}', style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 17))),
-            _StatusChip(status: status),
+            Chip(label: Text(status.labelAr)),
           ]),
           const SizedBox(height: 10),
           Text(customer, style: const TextStyle(fontWeight: FontWeight.w800)),
@@ -93,7 +97,11 @@ class _OrderCard extends StatelessWidget {
             );
           }),
           const Divider(height: 24),
-          Row(children: [const Text('الإجمالي', style: TextStyle(fontWeight: FontWeight.w800)), const Spacer(), Text('${total.toStringAsFixed(0)} ج.م', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900))]),
+          Row(children: [
+            const Text('الإجمالي', style: TextStyle(fontWeight: FontWeight.w800)),
+            const Spacer(),
+            Text('${total.toStringAsFixed(0)} ج.م', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
+          ]),
           const SizedBox(height: 14),
           _actions(context, status),
         ]),
@@ -101,43 +109,21 @@ class _OrderCard extends StatelessWidget {
     );
   }
 
-  Widget _actions(BuildContext context, String status) {
-    if (status == OrderStatus.waitingMerchantApproval.name || status == OrderStatus.received.name || status == 'normal') {
+  Widget _actions(BuildContext context, OrderStatus status) {
+    if (status == OrderStatus.waitingMerchantApproval) {
       return Row(children: [
-        Expanded(child: OutlinedButton(onPressed: () => _setStatus(context, OrderStatus.rejected.name), child: const Text('رفض'))),
+        Expanded(child: OutlinedButton(onPressed: () => _setStatus(context, OrderStatus.rejected), child: const Text('رفض'))),
         const SizedBox(width: 10),
-        Expanded(child: FilledButton(onPressed: () => _setStatus(context, OrderStatus.accepted.name), child: const Text('قبول الطلب'))),
+        Expanded(child: FilledButton(onPressed: () => _setStatus(context, OrderStatus.accepted), child: const Text('قبول الطلب'))),
       ]);
     }
-    if (status == OrderStatus.accepted.name) {
-      return FilledButton(onPressed: () => _setStatus(context, OrderStatus.preparing.name), child: const Text('بدء التجهيز'));
+    if (status == OrderStatus.accepted) {
+      return FilledButton(onPressed: () => _setStatus(context, OrderStatus.preparing), child: const Text('بدء التجهيز'));
     }
-    if (status == OrderStatus.preparing.name) {
-      return FilledButton(onPressed: () => _setStatus(context, OrderStatus.readyForPickup.name), child: const Text('جاهز للاستلام'));
+    if (status == OrderStatus.preparing) {
+      return FilledButton(onPressed: () => _setStatus(context, OrderStatus.readyForPickup), child: const Text('جاهز للاستلام'));
     }
     return const SizedBox.shrink();
-  }
-}
-
-class _StatusChip extends StatelessWidget {
-  const _StatusChip({required this.status});
-  final String status;
-  @override
-  Widget build(BuildContext context) {
-    const labels = <String, String>{
-      'waitingMerchantApproval': 'بانتظار القبول',
-      'received': 'جديد',
-      'normal': 'جديد',
-      'accepted': 'مقبول',
-      'preparing': 'قيد التجهيز',
-      'readyForPickup': 'جاهز',
-      'pickedUpByRider': 'مع المندوب',
-      'onTheWay': 'في الطريق',
-      'delivered': 'تم التسليم',
-      'rejected': 'مرفوض',
-      'cancelled': 'ملغي',
-    };
-    return Chip(label: Text(labels[status] ?? status));
   }
 }
 
