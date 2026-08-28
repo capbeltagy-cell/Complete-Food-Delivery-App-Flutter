@@ -148,7 +148,7 @@ jobs:
 
           foreach ($file in Get-ChildItem $dartRoots -Recurse -Filter '*.dart' -File) {
             $text = [IO.File]::ReadAllText($file.FullName, [Text.Encoding]::UTF8)
-            $lines = $text -split "\r?\n", 0, 'SimpleMatch'
+            $lines = $text -split "\r?\n"
             $didChange = $false
             for ($i = 0; $i -lt $lines.Count; $i++) {
               if ($lines[$i].IndexOfAny($markers) -lt 0) { continue }
