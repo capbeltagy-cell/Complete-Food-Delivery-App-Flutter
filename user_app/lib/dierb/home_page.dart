@@ -1,6 +1,5 @@
 import 'package:dierb_core/dierb_core.dart';
 import 'package:flutter/material.dart';
-
 import 'app_config.dart';
 
 class DierbHomePage extends StatelessWidget {
@@ -12,70 +11,84 @@ class DierbHomePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      child: CustomScrollView(
-        slivers: [
-          SliverToBoxAdapter(child: _Header()),
-          SliverPadding(
-            padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
-            sliver: SliverToBoxAdapter(
-              child: TextField(
-                decoration: InputDecoration(
-                  hintText: 'بتدور على إيه في ديرب؟',
-                  prefixIcon: const Icon(Icons.search_rounded),
-                  suffixIcon: const Icon(Icons.tune_rounded),
-                  filled: true,
-                  fillColor: Colors.white,
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(18), borderSide: BorderSide.none),
+    return ColoredBox(
+      color: AppConfig.backgroundColor,
+      child: SafeArea(
+        child: CustomScrollView(
+          physics: const BouncingScrollPhysics(),
+          slivers: [
+            SliverToBoxAdapter(child: _Header()),
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(16, 2, 16, 14),
+              sliver: SliverToBoxAdapter(
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(color: AppConfig.borderColor),
+                    boxShadow: const [BoxShadow(color: Color(0x0D172033), blurRadius: 20, offset: Offset(0, 8))],
+                  ),
+                  child: TextField(
+                    decoration: InputDecoration(
+                      hintText: 'بتدور على إيه في ديرب؟',
+                      hintStyle: const TextStyle(color: AppConfig.textSecondary, fontWeight: FontWeight.w600),
+                      prefixIcon: const Icon(Icons.search_rounded, color: AppConfig.brandColor),
+                      suffixIcon: Container(
+                        margin: const EdgeInsets.all(7),
+                        decoration: BoxDecoration(color: AppConfig.brandColorSoft, borderRadius: BorderRadius.circular(12)),
+                        child: const Icon(Icons.tune_rounded, color: AppConfig.brandColor),
+                      ),
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(vertical: 16),
+                    ),
+                  ),
                 ),
               ),
             ),
-          ),
-          const SliverToBoxAdapter(child: _OfferBanner()),
-          SliverToBoxAdapter(child: _SectionTitle(title: 'كل احتياجاتك', action: 'عرض الكل')),
-          SliverPadding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            sliver: SliverGrid.builder(
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 4,
-                mainAxisExtent: 104,
-                crossAxisSpacing: 10,
-                mainAxisSpacing: 10,
-              ),
-              itemCount: categories.length,
-              itemBuilder: (context, index) {
-                final category = categories[index];
-                return Column(
-                  children: [
+            const SliverToBoxAdapter(child: _OfferBanner()),
+            SliverToBoxAdapter(child: _SectionTitle(title: 'كل احتياجاتك', action: 'عرض الكل')),
+            SliverPadding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              sliver: SliverGrid.builder(
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 4, mainAxisExtent: 108, crossAxisSpacing: 10, mainAxisSpacing: 10),
+                itemCount: categories.length,
+                itemBuilder: (context, index) {
+                  final category = categories[index];
+                  return Column(children: [
                     Container(
-                      width: 62,
-                      height: 62,
-                      decoration: BoxDecoration(color: _categoryColor(index), borderRadius: BorderRadius.circular(20)),
-                      child: Icon(_categoryIcon(category.icon), color: const Color(0xFF1F2937)),
+                      width: 64,
+                      height: 64,
+                      decoration: BoxDecoration(
+                        color: _categoryColor(index),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: Colors.white, width: 2),
+                        boxShadow: const [BoxShadow(color: Color(0x10172033), blurRadius: 12, offset: Offset(0, 5))],
+                      ),
+                      child: Icon(_categoryIcon(category.icon), color: AppConfig.brandColor, size: 28),
                     ),
-                    const SizedBox(height: 7),
-                    Text(category.nameAr, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
-                  ],
-                );
-              },
+                    const SizedBox(height: 8),
+                    Text(category.nameAr, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, color: AppConfig.textPrimary, fontWeight: FontWeight.w800)),
+                  ]);
+                },
+              ),
             ),
-          ),
-          SliverToBoxAdapter(child: _SectionTitle(title: 'عروض النهارده', action: 'المزيد')),
-          const SliverToBoxAdapter(child: _HorizontalCards()),
-          SliverToBoxAdapter(child: _SectionTitle(title: 'اسأل أهل ديرب', action: 'كل الأسئلة')),
-          const SliverToBoxAdapter(child: _CommunityCard()),
-          SliverToBoxAdapter(child: _SectionTitle(title: 'محلات قريبة منك', action: 'عرض الخريطة')),
-          const SliverToBoxAdapter(child: _StoreCard()),
-          const SliverToBoxAdapter(child: SizedBox(height: 24)),
-        ],
+            SliverToBoxAdapter(child: _SectionTitle(title: 'عروض النهارده', action: 'المزيد')),
+            const SliverToBoxAdapter(child: _HorizontalCards()),
+            SliverToBoxAdapter(child: _SectionTitle(title: 'اسأل أهل ديرب', action: 'كل الأسئلة')),
+            const SliverToBoxAdapter(child: _CommunityCard()),
+            SliverToBoxAdapter(child: _SectionTitle(title: 'محلات قريبة منك', action: 'عرض الكل')),
+            const SliverToBoxAdapter(child: _StoreCard()),
+            const SliverToBoxAdapter(child: SizedBox(height: 28)),
+          ],
+        ),
       ),
     );
   }
 
   static Color _categoryColor(int index) {
     const colors = <Color>[
-      Color(0xFFFFE8D6), Color(0xFFE0F2E9), Color(0xFFE6EEFF), Color(0xFFFFF2C7),
-      Color(0xFFEDE4FF), Color(0xFFFFE5E9), Color(0xFFE1F5FE), Color(0xFFE8ECEF),
+      Color(0xFFF4EDE4), Color(0xFFEAF4F0), Color(0xFFEAF1F8), Color(0xFFF8F1E6),
+      Color(0xFFF0ECF7), Color(0xFFF7ECEE), Color(0xFFEAF5F8), Color(0xFFF0F3F6),
     ];
     return colors[index % colors.length];
   }
@@ -98,25 +111,29 @@ class DierbHomePage extends StatelessWidget {
 class _Header extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
-        child: Row(
-          children: [
-            Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(color: AppConfig.brandColor, borderRadius: BorderRadius.circular(16)),
-              child: const Center(child: Text('د', style: TextStyle(color: Colors.white, fontSize: 25, fontWeight: FontWeight.w900))),
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+        child: Row(children: [
+          Container(
+            width: 50,
+            height: 50,
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(begin: Alignment.topRight, end: Alignment.bottomLeft, colors: [AppConfig.brandColor, AppConfig.secondaryColor]),
+              borderRadius: BorderRadius.circular(17),
+              boxShadow: const [BoxShadow(color: Color(0x25123A63), blurRadius: 18, offset: Offset(0, 7))],
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                const Text('أهلاً بيك في ديرب', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
-                Row(children: [const Icon(Icons.location_on_rounded, size: 15, color: AppConfig.brandColor), const SizedBox(width: 4), Text(LaunchLocationDefaults.city.nameAr)]),
-              ]),
-            ),
-            IconButton.filledTonal(onPressed: () {}, icon: const Icon(Icons.notifications_none_rounded)),
-          ],
-        ),
+            child: const Center(child: Text('د', style: TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.w900))),
+          ),
+          const SizedBox(width: 12),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            const Text('أهلاً بيك في ديرب', style: TextStyle(fontSize: 19, color: AppConfig.textPrimary, fontWeight: FontWeight.w900)),
+            const SizedBox(height: 3),
+            Row(children: [const Icon(Icons.location_on_rounded, size: 15, color: AppConfig.accentColor), const SizedBox(width: 3), Text(LaunchLocationDefaults.city.nameAr, style: const TextStyle(color: AppConfig.textSecondary, fontWeight: FontWeight.w700))]),
+          ])),
+          Container(
+            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(15), border: Border.all(color: AppConfig.borderColor)),
+            child: IconButton(onPressed: () {}, icon: const Icon(Icons.notifications_none_rounded, color: AppConfig.brandColor)),
+          ),
+        ]),
       );
 }
 
@@ -125,21 +142,39 @@ class _OfferBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
         margin: const EdgeInsets.symmetric(horizontal: 16),
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(22),
         decoration: BoxDecoration(
-          gradient: const LinearGradient(colors: [Color(0xFF14532D), Color(0xFF22A060)]),
-          borderRadius: BorderRadius.circular(24),
+          gradient: const LinearGradient(begin: Alignment.topRight, end: Alignment.bottomLeft, colors: [Color(0xFF0F2F50), Color(0xFF1D527E)]),
+          borderRadius: BorderRadius.circular(26),
+          boxShadow: const [BoxShadow(color: Color(0x32123A63), blurRadius: 26, offset: Offset(0, 12))],
         ),
-        child: const Row(children: [
-          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text('ديرب كلها في إيدك', style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w900)),
-            SizedBox(height: 7),
-            Text('طلبات، محلات، خدمات وأهل بلدك في مكان واحد', style: TextStyle(color: Color(0xFFE4F7EC), height: 1.4)),
+        child: Row(children: [
+          const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('ديرب كلها في إيدك', style: TextStyle(color: Colors.white, fontSize: 23, fontWeight: FontWeight.w900)),
+            SizedBox(height: 8),
+            Text('محلات، طلبات، خدمات وأهل بلدك في تجربة واحدة', style: TextStyle(color: Color(0xFFDCE8F3), height: 1.45, fontWeight: FontWeight.w600)),
+            SizedBox(height: 14),
+            _PremiumPill(),
           ])),
-          SizedBox(width: 12),
-          Icon(Icons.storefront_rounded, color: Color(0xFFFFD166), size: 64),
+          const SizedBox(width: 12),
+          Container(
+            width: 72,
+            height: 72,
+            decoration: BoxDecoration(color: const Color(0x18FFFFFF), borderRadius: BorderRadius.circular(22), border: Border.all(color: const Color(0x33FFFFFF))),
+            child: const Icon(Icons.storefront_rounded, color: AppConfig.accentColor, size: 40),
+          ),
         ]),
       );
+}
+
+class _PremiumPill extends StatelessWidget {
+  const _PremiumPill();
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+    decoration: BoxDecoration(color: const Color(0x1AFFFFFF), borderRadius: BorderRadius.circular(999), border: Border.all(color: const Color(0x33FFFFFF))),
+    child: const Row(mainAxisSize: MainAxisSize.min, children: [Icon(Icons.bolt_rounded, color: AppConfig.accentColor, size: 16), SizedBox(width: 5), Text('كل ديرب • أسرع وأسهل', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w800))]),
+  );
 }
 
 class _SectionTitle extends StatelessWidget {
@@ -148,10 +183,10 @@ class _SectionTitle extends StatelessWidget {
   final String action;
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.fromLTRB(16, 24, 16, 12),
+        padding: const EdgeInsets.fromLTRB(16, 25, 16, 12),
         child: Row(children: [
-          Expanded(child: Text(title, style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w900))),
-          Text(action, style: const TextStyle(color: AppConfig.brandColor, fontWeight: FontWeight.w700)),
+          Expanded(child: Text(title, style: const TextStyle(fontSize: 19, color: AppConfig.textPrimary, fontWeight: FontWeight.w900))),
+          Text(action, style: const TextStyle(color: AppConfig.brandColor, fontWeight: FontWeight.w800)),
         ]),
       );
 }
@@ -160,16 +195,12 @@ class _HorizontalCards extends StatelessWidget {
   const _HorizontalCards();
   @override
   Widget build(BuildContext context) => SizedBox(
-        height: 145,
-        child: ListView(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          scrollDirection: Axis.horizontal,
-          children: const [
-            _MiniCard(title: 'خصم على طلبات البيت', subtitle: 'عروض محلات منطقتك', icon: Icons.local_offer_rounded, color: Color(0xFFFFE4D6)),
-            _MiniCard(title: 'توصيل أسرع', subtitle: 'متاجر قريبة ومفتوحة', icon: Icons.delivery_dining_rounded, color: Color(0xFFDDF6E8)),
-            _MiniCard(title: 'خدمات موثوقة', subtitle: 'اختار صنايعي قريب', icon: Icons.verified_rounded, color: Color(0xFFE4EAFF)),
-          ],
-        ),
+        height: 150,
+        child: ListView(padding: const EdgeInsets.symmetric(horizontal: 16), scrollDirection: Axis.horizontal, children: const [
+          _MiniCard(title: 'عروض البيت', subtitle: 'خصومات يومية من محلات ديرب', icon: Icons.local_offer_rounded, color: Color(0xFFF7EFE4)),
+          _MiniCard(title: 'توصيل أسرع', subtitle: 'متاجر قريبة ومفتوحة الآن', icon: Icons.delivery_dining_rounded, color: Color(0xFFEAF4F0)),
+          _MiniCard(title: 'خدمات موثوقة', subtitle: 'أهل خبرة قريبين منك', icon: Icons.verified_rounded, color: Color(0xFFEAF1F8)),
+        ]),
       );
 }
 
@@ -181,13 +212,16 @@ class _MiniCard extends StatelessWidget {
   final Color color;
   @override
   Widget build(BuildContext context) => Container(
-        width: 210,
+        width: 220,
         margin: const EdgeInsetsDirectional.only(end: 12),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(22)),
+        padding: const EdgeInsets.all(17),
+        decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(22), border: Border.all(color: Colors.white), boxShadow: const [BoxShadow(color: Color(0x0D172033), blurRadius: 14, offset: Offset(0, 6))]),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Icon(icon, size: 32), const Spacer(), Text(title, style: const TextStyle(fontWeight: FontWeight.w900)),
-          const SizedBox(height: 4), Text(subtitle, style: const TextStyle(fontSize: 12)),
+          Container(width: 42, height: 42, decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14)), child: Icon(icon, color: AppConfig.brandColor, size: 24)),
+          const Spacer(),
+          Text(title, style: const TextStyle(color: AppConfig.textPrimary, fontSize: 15, fontWeight: FontWeight.w900)),
+          const SizedBox(height: 4),
+          Text(subtitle, style: const TextStyle(color: AppConfig.textSecondary, fontSize: 12, fontWeight: FontWeight.w600)),
         ]),
       );
 }
@@ -198,11 +232,13 @@ class _CommunityCard extends StatelessWidget {
   Widget build(BuildContext context) => Container(
         margin: const EdgeInsets.symmetric(horizontal: 16),
         padding: const EdgeInsets.all(17),
-        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(22)),
+        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(22), border: Border.all(color: AppConfig.borderColor), boxShadow: const [BoxShadow(color: Color(0x0B172033), blurRadius: 18, offset: Offset(0, 8))]),
         child: const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Row(children: [CircleAvatar(child: Icon(Icons.person_rounded)), SizedBox(width: 10), Expanded(child: Text('محمود • ديرب نجم', style: TextStyle(fontWeight: FontWeight.w800))), Icon(Icons.verified_rounded, color: AppConfig.brandColor, size: 19)]),
-          SizedBox(height: 14), Text('محتاج كهربائي شاطر يكون متاح النهارده، مين يرشح حد؟', style: TextStyle(fontSize: 16, height: 1.55, fontWeight: FontWeight.w700)),
-          SizedBox(height: 14), Row(children: [Icon(Icons.thumb_up_alt_outlined, size: 19), SizedBox(width: 5), Text('12 مفيد'), SizedBox(width: 20), Icon(Icons.chat_bubble_outline_rounded, size: 19), SizedBox(width: 5), Text('8 ردود')]),
+          Row(children: [CircleAvatar(backgroundColor: AppConfig.brandColorSoft, child: Icon(Icons.person_rounded, color: AppConfig.brandColor)), SizedBox(width: 10), Expanded(child: Text('من أهل ديرب', style: TextStyle(color: AppConfig.textPrimary, fontWeight: FontWeight.w900))), Icon(Icons.verified_rounded, color: AppConfig.brandColor, size: 19)]),
+          SizedBox(height: 14),
+          Text('محتاج كهربائي شاطر يكون متاح النهارده، مين يرشح حد؟', style: TextStyle(fontSize: 16, color: AppConfig.textPrimary, height: 1.55, fontWeight: FontWeight.w700)),
+          SizedBox(height: 14),
+          Row(children: [Icon(Icons.thumb_up_alt_outlined, size: 19, color: AppConfig.textSecondary), SizedBox(width: 5), Text('12 مفيد', style: TextStyle(color: AppConfig.textSecondary)), SizedBox(width: 20), Icon(Icons.chat_bubble_outline_rounded, size: 19, color: AppConfig.textSecondary), SizedBox(width: 5), Text('8 ردود', style: TextStyle(color: AppConfig.textSecondary))]),
         ]),
       );
 }
@@ -213,12 +249,12 @@ class _StoreCard extends StatelessWidget {
   Widget build(BuildContext context) => Container(
         margin: const EdgeInsets.symmetric(horizontal: 16),
         padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(22)),
+        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(22), border: Border.all(color: AppConfig.borderColor), boxShadow: const [BoxShadow(color: Color(0x0B172033), blurRadius: 18, offset: Offset(0, 8))]),
         child: const Row(children: [
-          CircleAvatar(radius: 30, backgroundColor: Color(0xFFE0F2E9), child: Icon(Icons.store_rounded, color: AppConfig.brandColor, size: 30)),
+          CircleAvatar(radius: 31, backgroundColor: AppConfig.brandColorSoft, child: Icon(Icons.store_rounded, color: AppConfig.brandColor, size: 30)),
           SizedBox(width: 12),
-          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('متاجر ديرب المميزة', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16)), SizedBox(height: 5), Text('قريب منك • مفتوح الآن'), SizedBox(height: 5), Row(children: [Icon(Icons.star_rounded, color: AppConfig.accentColor, size: 18), Text(' 4.8')])])),
-          Icon(Icons.arrow_back_ios_new_rounded, size: 18),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('متاجر ديرب المميزة', style: TextStyle(color: AppConfig.textPrimary, fontWeight: FontWeight.w900, fontSize: 16)), SizedBox(height: 5), Text('قريب منك • مفتوح الآن', style: TextStyle(color: AppConfig.textSecondary, fontWeight: FontWeight.w600)), SizedBox(height: 5), Row(children: [Icon(Icons.star_rounded, color: AppConfig.accentColor, size: 18), Text(' 4.8', style: TextStyle(fontWeight: FontWeight.w800))])])),
+          Icon(Icons.arrow_back_ios_new_rounded, color: AppConfig.brandColor, size: 18),
         ]),
       );
 }
