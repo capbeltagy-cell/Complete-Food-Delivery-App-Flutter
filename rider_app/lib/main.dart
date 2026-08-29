@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:rider_app/splashScreen/splash_screen.dart';
@@ -17,13 +19,32 @@ const _dierbFirebase = FirebaseOptions(
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // Setup global error handlers
+  FlutterError.onError = (FlutterErrorDetails details) {
+    if (kDebugMode) {
+      FlutterError.dumpErrorToConsole(details);
+    }
+  };
+
+  PlatformDispatcher.instance.onError = (error, stack) {
+    if (kDebugMode) {
+      print('PlatformDispatcher error: $error\n$stack');
+    }
+    return true;
+  };
+
   Object? startupError;
   try {
     sharedPreferences = await SharedPreferences.getInstance();
     if (Firebase.apps.isEmpty) {
       await Firebase.initializeApp(options: _dierbFirebase);
     }
-  } catch (error) {
+    // Initialize firebaseAuth after Firebase initialization completes
+    await initializeFirebaseAuth();
+  } catch (error, stackTrace) {
+    if (kDebugMode) {
+      print('Startup error: $error\n$stackTrace');
+    }
     startupError = error;
   }
 
