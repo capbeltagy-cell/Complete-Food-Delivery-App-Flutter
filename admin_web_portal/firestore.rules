@@ -51,10 +51,7 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
     match /merchantApplications/{id} {
-      allow create: if signedIn()
-        && request.auth.uid == id
-        && request.resource.data.userId == request.auth.uid
-        && request.resource.data.status == 'pending';
+      allow create: if signedIn() && request.auth.uid == id && request.resource.data.userId == request.auth.uid && request.resource.data.status == 'pending';
       allow read: if isAdmin() || (signedIn() && request.auth.uid == id);
       allow update, delete: if isAdmin();
     }
@@ -67,40 +64,22 @@ service cloud.firestore {
     match /stores/{id} {
       allow read: if isAdmin() || resource.data.status == 'approved' || owns('ownerId') || (signedIn() && request.auth.uid == id);
       allow create: if createsOwn('ownerId') && request.resource.data.status == 'pending' && request.resource.data.verified == false && request.resource.data.featured == false;
-      allow update: if isAdmin() || ((owns('ownerId') || (signedIn() && request.auth.uid == id)) && only(['name','description','logo','cover','categoryId','cityId','areaId','villageId','address','latitude','longitude','phone','whatsapp','openingHours','isOpen','deliveryEnabled','pickupEnabled','deliveryZones','minimumOrder','deliveryFee','updatedAt']));
+      allow update: if isAdmin() || ((owns('ownerId') || (signedIn() && request.auth.uid == id)) && only(['name','description','logo','cover','categoryId','categoryName','cityId','areaId','villageId','address','latitude','longitude','phone','whatsapp','openingHours','isOpen','deliveryEnabled','pickupEnabled','deliveryZones','minimumOrder','deliveryFee','updatedAt']));
       allow delete: if isAdmin();
     }
     match /products/{id} {
-      allow read: if isAdmin()
-        || owns('ownerId')
-        || (resource.data.available == true
-            && exists(/databases/$(database)/documents/stores/$(resource.data.storeId))
-            && get(/databases/$(database)/documents/stores/$(resource.data.storeId)).data.status == 'approved');
-      allow create: if createsOwn('ownerId')
-        && ownsApprovedStore(request.resource.data.storeId)
-        && request.resource.data.featured == false;
+      allow read: if isAdmin() || owns('ownerId') || resource.data.available == true;
+      allow create: if createsOwn('ownerId') && ownsApprovedStore(request.resource.data.storeId) && request.resource.data.featured == false;
       allow update: if isAdmin() || (owns('ownerId') && only(['name','description','images','price','salePrice','stock','categoryId','options','available','deliveryEligible','updatedAt']));
       allow delete: if isAdmin() || owns('ownerId');
     }
     match /orders/{id} {
-      allow create: if createsOwn('orderedBy')
-        && request.resource.data.status in ['received','waitingMerchantApproval']
-        && request.resource.data.riderUID == ''
-        && validOrderStore();
-      allow read: if isAdmin()
-        || owns('orderedBy')
-        || owns('sellerUID')
-        || owns('riderUID')
-        || (isApprovedRider() && resource.data.riderUID == '' && resource.data.status == 'readyForPickup');
+      allow create: if createsOwn('orderedBy') && request.resource.data.status in ['received','waitingMerchantApproval'] && request.resource.data.riderUID == '' && validOrderStore();
+      allow read: if isAdmin() || owns('orderedBy') || owns('sellerUID') || owns('riderUID') || (isApprovedRider() && resource.data.riderUID == '' && resource.data.status == 'readyForPickup');
       allow update: if isAdmin()
         || (owns('sellerUID') && merchantOrderTransition() && only(['status','updatedAt']))
         || (owns('riderUID') && isApprovedRider() && riderOrderTransition() && only(['status','lat','lng','address','pickedUpAt','onTheWayAt','deliveredAt','updatedAt']))
-        || (isApprovedRider()
-            && resource.data.riderUID == ''
-            && resource.data.status == 'readyForPickup'
-            && request.resource.data.riderUID == request.auth.uid
-            && request.resource.data.status == 'pickedUpByRider'
-            && only(['riderUID','riderName','status','lat','lng','address','pickedUpAt','updatedAt']));
+        || (isApprovedRider() && resource.data.riderUID == '' && resource.data.status == 'readyForPickup' && request.resource.data.riderUID == request.auth.uid && request.resource.data.status == 'pickedUpByRider' && only(['riderUID','riderName','status','lat','lng','address','pickedUpAt','updatedAt']));
     }
     match /categories/{id} { allow read: if resource.data.active == true || isAdmin(); allow write: if isAdmin(); }
     match /cities/{id} { allow read: if resource.data.active == true || isAdmin(); allow write: if isAdmin(); }
@@ -154,4 +133,3 @@ service cloud.firestore {
     match /{document=**} { allow read, write: if isAdmin(); }
   }
 }
-
