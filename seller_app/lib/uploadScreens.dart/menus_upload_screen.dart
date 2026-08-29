@@ -142,14 +142,46 @@ class _ProductEditorState extends State<_ProductEditor> {
     super.dispose();
   }
 
-  Future<void> _pickAndUploadImage() async {
+  Future<void> _chooseImageSource() async {
+    if (uploadingImage) return;
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheetContext) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('إضافة صورة المنتج', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
+              const SizedBox(height: 10),
+              ListTile(
+                leading: const CircleAvatar(child: Icon(Icons.photo_library_outlined)),
+                title: const Text('اختيار من الصور'),
+                subtitle: const Text('اختار صورة محفوظة على الجهاز'),
+                onTap: () => Navigator.pop(sheetContext, ImageSource.gallery),
+              ),
+              ListTile(
+                leading: const CircleAvatar(child: Icon(Icons.camera_alt_outlined)),
+                title: const Text('فتح الكاميرا'),
+                subtitle: const Text('صوّر المنتج وارفع الصورة مباشرة'),
+                onTap: () => Navigator.pop(sheetContext, ImageSource.camera),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (source != null) await _pickAndUploadImage(source);
+  }
+
+  Future<void> _pickAndUploadImage(ImageSource source) async {
     try {
       final XFile? selected = await _imagePicker.pickImage(
-        source: ImageSource.gallery,
+        source: source,
         imageQuality: 82,
         maxWidth: 1600,
       );
-
       if (selected == null) return;
 
       setState(() {
@@ -159,7 +191,7 @@ class _ProductEditorState extends State<_ProductEditor> {
       });
 
       final request = http.MultipartRequest('POST', _uploadEndpoint);
-
+      request.fields['type'] = 'products';
       request.files.add(
         http.MultipartFile.fromBytes(
           'file',
@@ -170,50 +202,34 @@ class _ProductEditorState extends State<_ProductEditor> {
 
       final response = await request.send().timeout(const Duration(seconds: 45));
       final body = await response.stream.bytesToString();
-
-      if (response.statusCode != 200) {
-        throw Exception('Storage HTTP ${response.statusCode}');
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        throw Exception('VPS HTTP ${response.statusCode}');
       }
 
       final data = jsonDecode(body) as Map<String, dynamic>;
-
       if (data['success'] != true || data['url'] == null || data['url'].toString().trim().isEmpty) {
-        throw Exception('Invalid storage response');
+        throw Exception('Invalid VPS response');
       }
 
       final returnedUrl = data['url'].toString().trim();
-      final uploadedUrl = returnedUrl.startsWith('http')
-          ? returnedUrl
-          : _uploadEndpoint.resolve(returnedUrl).toString();
-
+      final uploadedUrl = returnedUrl.startsWith('http') ? returnedUrl : _uploadEndpoint.resolve(returnedUrl).toString();
       if (!mounted) return;
-
       setState(() {
         imageUrl.text = uploadedUrl;
         uploadingImage = false;
         imageUploadError = null;
       });
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('تم رفع الصورة بنجاح'),
-        ),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم رفع الصورة على سيرفر ديرب')));
     } catch (e) {
       if (!mounted) return;
-
       setState(() {
         uploadingImage = false;
-        imageUploadError = 'تعذر رفع الصورة. تأكد من الاتصال وحاول مرة أخرى.';
+        imageUploadError = 'تعذر رفع الصورة. تأكد أن سيرفر الصور يعمل ثم حاول مرة أخرى.';
       });
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('تعذر رفع الصورة: $e'),
-        ),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر رفع الصورة: $e')));
     }
   }
+
   Future<void> _save() async {
     if (uploadingImage) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('انتظر حتى يكتمل رفع الصورة')));
@@ -272,9 +288,7 @@ class _ProductEditorState extends State<_ProductEditor> {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
     } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('تعذر حفظ المنتج الآن. تأكد من الاتصال وحاول مرة أخرى.')),
-        );
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تعذر حفظ المنتج الآن. تأكد من الاتصال وحاول مرة أخرى.')));
       }
     } finally {
       if (mounted) setState(() => saving = false);
@@ -287,49 +301,49 @@ class _ProductEditorState extends State<_ProductEditor> {
     return Scaffold(
       appBar: AppBar(title: Text(widget.existing == null ? 'إضافة منتج' : 'تعديل المنتج', style: const TextStyle(fontWeight: FontWeight.w900))),
       body: ListView(padding: const EdgeInsets.all(16), children: [
-        Container(
-          height: 180,
-          clipBehavior: Clip.antiAlias,
-          decoration: BoxDecoration(color: const Color(0xFFEFF6EE), borderRadius: BorderRadius.circular(18)),
-          child: previewUrl.isEmpty
-              ? const Center(child: Icon(Icons.image_outlined, size: 58, color: Color(0xFF166534)))
-              : Image.network(previewUrl, fit: BoxFit.cover, errorBuilder: (_, __, ___) => const Center(child: Icon(Icons.broken_image_outlined, size: 54))),
+        InkWell(
+          onTap: uploadingImage ? null : _chooseImageSource,
+          borderRadius: BorderRadius.circular(18),
+          child: Container(
+            height: 180,
+            clipBehavior: Clip.antiAlias,
+            decoration: BoxDecoration(color: const Color(0xFFEFF6EE), borderRadius: BorderRadius.circular(18)),
+            child: previewUrl.isEmpty
+                ? const Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+                    Icon(Icons.add_photo_alternate_outlined, size: 58, color: Color(0xFF166534)),
+                    SizedBox(height: 8),
+                    Text('اضغط لإضافة صورة'),
+                  ])
+                : Image.network(previewUrl, fit: BoxFit.cover, errorBuilder: (_, __, ___) => const Center(child: Icon(Icons.broken_image_outlined, size: 54))),
+          ),
         ),
         const SizedBox(height: 10),
-          FilledButton.icon(
-            onPressed: uploadingImage ? null : _pickAndUploadImage,
-            icon: uploadingImage
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Icon(Icons.add_photo_alternate_outlined),
-            label: Text(
-              uploadingImage ? 'جارٍ رفع الصورة...' : 'اختيار ورفع صورة المنتج',
-            ),
+        FilledButton.icon(
+          onPressed: uploadingImage ? null : _chooseImageSource,
+          icon: uploadingImage
+              ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+              : const Icon(Icons.add_a_photo_outlined),
+          label: Text(uploadingImage ? 'جارٍ رفع الصورة...' : (previewUrl.isEmpty ? 'إضافة صورة' : 'تغيير الصورة')),
+        ),
+        if (imageUrl.text.trim().isNotEmpty)
+          const Padding(
+            padding: EdgeInsets.only(top: 8),
+            child: Row(children: [
+              Icon(Icons.check_circle, color: Colors.green),
+              SizedBox(width: 6),
+              Text('الصورة محفوظة على سيرفر ديرب'),
+            ]),
           ),
-          if (imageUrl.text.trim().isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(top: 8),
-              child: Row(
-                children: const [
-                  Icon(Icons.check_circle, color: Colors.green),
-                  SizedBox(width: 6),
-                  Text('تم رفع الصورة وحفظها على سيرفر ديرب'),
-                ],
-              ),
-            ),
-          if (imageUploadError != null)
-            Padding(
-              padding: const EdgeInsets.only(top: 8),
-              child: Row(children: [
-                const Icon(Icons.error_outline_rounded, color: Colors.red),
-                const SizedBox(width: 6),
-                Expanded(child: Text(imageUploadError!, style: const TextStyle(color: Colors.red))),
-                TextButton(onPressed: pickedImage == null || uploadingImage ? null : _pickAndUploadImage, child: const Text('إعادة المحاولة')),
-              ]),
-            ),
+        if (imageUploadError != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Row(children: [
+              const Icon(Icons.error_outline_rounded, color: Colors.red),
+              const SizedBox(width: 6),
+              Expanded(child: Text(imageUploadError!, style: const TextStyle(color: Colors.red))),
+              TextButton(onPressed: uploadingImage ? null : _chooseImageSource, child: const Text('إعادة المحاولة')),
+            ]),
+          ),
         const SizedBox(height: 14),
         TextField(controller: name, decoration: const InputDecoration(labelText: 'اسم المنتج', border: OutlineInputBorder())),
         const SizedBox(height: 10),
