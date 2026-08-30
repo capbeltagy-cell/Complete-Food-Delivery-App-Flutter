@@ -7,10 +7,12 @@ class CartItemDesign extends StatelessWidget {
     super.key,
     this.model,
     this.quanNumber,
-  });
+    BuildContext? context,
+  }) : legacyContext = context;
 
   final Items? model;
   final int? quanNumber;
+  final BuildContext? legacyContext;
 
   @override
   Widget build(BuildContext context) {
