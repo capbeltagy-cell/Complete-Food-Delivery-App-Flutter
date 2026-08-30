@@ -231,6 +231,7 @@ class _RevenueCard extends StatelessWidget {
           ])),
         ]),
       );
+}
 
 class _CollectionPanel extends StatelessWidget {
   const _CollectionPanel({required this.section});
