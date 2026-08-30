@@ -25,8 +25,21 @@ class RiderEarningsPage extends StatelessWidget {
                     final defaultFee = (feeSnapshot.data?.data()?['defaultRiderFee'] as num?)?.toDouble() ?? 0;
                     var total = 0.0;
                     for (final doc in delivered) {
-                      total += (doc.data()['riderFee'] as num?)?.toDouble() ?? defaultFee;
+                      total += (doc.data()['riderPayoutPiasters'] as num?) != null
+                          ? (doc.data()['riderPayoutPiasters'] as num).toDouble() / 100
+                          : (doc.data()['riderFee'] as num?)?.toDouble() ?? defaultFee;
                     }
+                    final now = DateTime.now();
+                    final today = DateTime(now.year, now.month, now.day);
+                    final week = today.subtract(Duration(days: today.weekday - 1));
+                    final month = DateTime(now.year, now.month);
+                    double earningsSince(DateTime from) => delivered.where((doc) {
+                          final value = doc.data()['deliveredAt'] ?? doc.data()['updatedAt'];
+                          return value is Timestamp && !value.toDate().isBefore(from);
+                        }).fold(0, (sum, doc) {
+                          final data = doc.data();
+                          return sum + ((data['riderPayoutPiasters'] as num?)?.toDouble() != null ? (data['riderPayoutPiasters'] as num).toDouble() / 100 : (data['riderFee'] as num?)?.toDouble() ?? defaultFee);
+                        });
                     return ListView(
                       padding: const EdgeInsets.all(16),
                       children: [
@@ -48,6 +61,14 @@ class RiderEarningsPage extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(height: 18),
+                        Row(children: [
+                          Expanded(child: _PeriodEarning(label: 'اليوم', value: earningsSince(today))),
+                          const SizedBox(width: 8),
+                          Expanded(child: _PeriodEarning(label: 'الأسبوع', value: earningsSince(week))),
+                          const SizedBox(width: 8),
+                          Expanded(child: _PeriodEarning(label: 'الشهر', value: earningsSince(month))),
+                        ]),
+                        const SizedBox(height: 18),
                         const Text('التوصيلات المكتملة', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
                         const SizedBox(height: 8),
                         if (delivered.isEmpty)
@@ -55,7 +76,7 @@ class RiderEarningsPage extends StatelessWidget {
                         else
                           ...delivered.map((doc) {
                             final data = doc.data();
-                            final fee = (data['riderFee'] as num?)?.toDouble() ?? defaultFee;
+                            final fee = (data['riderPayoutPiasters'] as num?) != null ? (data['riderPayoutPiasters'] as num).toDouble() / 100 : (data['riderFee'] as num?)?.toDouble() ?? defaultFee;
                             return Card(
                               child: ListTile(
                                 leading: const CircleAvatar(child: Icon(Icons.check_rounded)),
@@ -73,4 +94,16 @@ class RiderEarningsPage extends StatelessWidget {
             ),
     );
   }
+}
+
+class _PeriodEarning extends StatelessWidget {
+  const _PeriodEarning({required this.label, required this.value});
+  final String label;
+  final double value;
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: const Color(0xFFE1E8E3))),
+        child: Column(children: [Text(label, style: const TextStyle(color: Color(0xFF68766F), fontSize: 12)), const SizedBox(height: 5), Text('${value.toStringAsFixed(2)} ج.م', textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.w900))]),
+      );
 }

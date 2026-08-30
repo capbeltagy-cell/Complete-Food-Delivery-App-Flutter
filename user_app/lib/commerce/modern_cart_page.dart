@@ -89,6 +89,15 @@ Future<void> _checkout(BuildContext cartContext, CartController cart) async {
     }
 
     final profile = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+    final monetizationDoc = await FirebaseFirestore.instance.collection('appSettings').doc('monetization').get();
+    final monetization = MonetizationSettings.fromMap(monetizationDoc.data());
+    final financials = OrderFinancialSnapshot.calculate(
+      subtotal: cart.subtotal,
+      deliveryFee: (store['deliveryFee'] as num?)?.toDouble() ?? 0,
+      settings: monetization,
+      merchantCommissionBps: (store['platformCommissionBps'] as num?)?.toInt(),
+      riderPayoutPiasters: (store['riderPayoutPiasters'] as num?)?.toInt(),
+    );
     final data = profile.data() ?? <String, dynamic>{};
     if (!cartContext.mounted) return;
     await showModalBottomSheet<void>(
@@ -108,6 +117,7 @@ Future<void> _checkout(BuildContext cartContext, CartController cart) async {
         cityId: store['cityId']?.toString() ?? '',
         areaId: store['areaId']?.toString() ?? '',
         villageId: store['villageId']?.toString() ?? '',
+        financials: financials,
       ),
     );
   } on FirebaseException catch (error) {
@@ -131,6 +141,7 @@ class _CheckoutSheet extends StatefulWidget {
     required this.cityId,
     required this.areaId,
     required this.villageId,
+    required this.financials,
   });
 
   final BuildContext cartContext;
@@ -145,6 +156,7 @@ class _CheckoutSheet extends StatefulWidget {
   final String cityId;
   final String areaId;
   final String villageId;
+  final OrderFinancialSnapshot financials;
 
   @override
   State<_CheckoutSheet> createState() => _CheckoutSheetState();
@@ -178,10 +190,9 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
         'sellerUID': widget.ownerId,
         'riderUID': '',
         'items': widget.cart.items.map((item) => item.toOrderMap()).toList(),
-        'subtotal': widget.cart.subtotal,
-        'deliveryFee': widget.deliveryFee,
-        'total': widget.cart.subtotal + widget.deliveryFee,
+        ...widget.financials.toMap(),
         'status': OrderStatus.waitingMerchantApproval.name,
+        'financialSnapshotVersion': 1,
         'cityId': widget.cityId.isEmpty ? LaunchLocationDefaults.cityId : widget.cityId,
         'areaId': widget.areaId,
         'villageId': widget.villageId,

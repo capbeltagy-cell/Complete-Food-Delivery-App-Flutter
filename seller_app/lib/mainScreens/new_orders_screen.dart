@@ -74,18 +74,34 @@ class _OrderCard extends StatelessWidget {
     final customer = data['customerName']?.toString() ?? 'عميل ديرب';
     final phone = data['customerPhone']?.toString() ?? '';
     final address = data['addressText']?.toString() ?? '';
+    final isNew = status == OrderStatus.waitingMerchantApproval;
     return Card(
+      color: isNew ? const Color(0xFFFFFBF2) : Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(22),
+        side: BorderSide(color: isNew ? const Color(0xFFFFB547) : const Color(0xFFE1E8E3), width: isNew ? 1.6 : 1),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           Row(children: [
-            Expanded(child: Text('طلب #${doc.id.substring(0, doc.id.length > 7 ? 7 : doc.id.length)}', style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 17))),
-            Chip(label: Text(status.labelAr)),
+            Container(width: 46, height: 46, decoration: BoxDecoration(color: isNew ? const Color(0xFFFFE9C4) : const Color(0xFFDCEFE6), borderRadius: BorderRadius.circular(14)), child: Icon(isNew ? Icons.notifications_active_rounded : Icons.receipt_long_rounded, color: isNew ? const Color(0xFF9A5A00) : const Color(0xFF0D6B4E))),
+            const SizedBox(width: 11),
+            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(isNew ? 'طلب جديد' : status.labelAr, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 17)),
+              Text('#${doc.id.substring(0, doc.id.length > 7 ? 7 : doc.id.length)} • ${_formatTime(data['createdAt'])}', style: const TextStyle(color: Color(0xFF68766F), fontSize: 12)),
+            ])),
+            Text('${total.toStringAsFixed(0)} ج.م', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
           ]),
           const SizedBox(height: 10),
-          Text(customer, style: const TextStyle(fontWeight: FontWeight.w800)),
-          if (phone.isNotEmpty) Text(phone),
-          if (address.isNotEmpty) Text(address),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(color: const Color(0xFFF5F7F4), borderRadius: BorderRadius.circular(16)),
+            child: Column(children: [
+              Row(children: [const Icon(Icons.person_outline_rounded, size: 19), const SizedBox(width: 7), Expanded(child: Text(customer, style: const TextStyle(fontWeight: FontWeight.w800))), if (phone.isNotEmpty) Text(phone, style: const TextStyle(color: Color(0xFF0D6B4E), fontWeight: FontWeight.w800))]),
+              if (address.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 7), child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [const Icon(Icons.location_on_outlined, size: 19), const SizedBox(width: 7), Expanded(child: Text(address, style: const TextStyle(color: Color(0xFF68766F))))])),
+            ]),
+          ),
           const Divider(height: 24),
           ...items.map((item) {
             final name = item['name']?.toString() ?? 'منتج';
@@ -93,7 +109,12 @@ class _OrderCard extends StatelessWidget {
             final price = (item['price'] as num?)?.toDouble() ?? 0;
             return Padding(
               padding: const EdgeInsets.symmetric(vertical: 3),
-              child: Row(children: [Expanded(child: Text('$name × $qty')), Text('${(price * qty).toStringAsFixed(0)} ج.م')]),
+              child: Row(children: [
+                _ProductThumb(url: (item['image'] ?? '').toString()),
+                const SizedBox(width: 9),
+                Expanded(child: Text('$name × $qty', style: const TextStyle(fontWeight: FontWeight.w700))),
+                Text('${(price * qty).toStringAsFixed(0)} ج.م', style: const TextStyle(fontWeight: FontWeight.w800)),
+              ]),
             );
           }),
           const Divider(height: 24),
@@ -112,19 +133,37 @@ class _OrderCard extends StatelessWidget {
   Widget _actions(BuildContext context, OrderStatus status) {
     if (status == OrderStatus.waitingMerchantApproval) {
       return Row(children: [
-        Expanded(child: OutlinedButton(onPressed: () => _setStatus(context, OrderStatus.rejected), child: const Text('رفض'))),
+        Expanded(child: OutlinedButton.icon(onPressed: () => _setStatus(context, OrderStatus.rejected), icon: const Icon(Icons.close_rounded), label: const Text('رفض'))),
         const SizedBox(width: 10),
-        Expanded(child: FilledButton(onPressed: () => _setStatus(context, OrderStatus.accepted), child: const Text('قبول الطلب'))),
+        Expanded(child: FilledButton.icon(onPressed: () => _setStatus(context, OrderStatus.acceptedByMerchant), icon: const Icon(Icons.check_rounded), label: const Text('قبول الطلب'))),
       ]);
     }
-    if (status == OrderStatus.accepted) {
-      return FilledButton(onPressed: () => _setStatus(context, OrderStatus.preparing), child: const Text('بدء التجهيز'));
+    if (status == OrderStatus.acceptedByMerchant) {
+      return FilledButton.icon(onPressed: () => _setStatus(context, OrderStatus.preparing), icon: const Icon(Icons.soup_kitchen_outlined), label: const Text('بدء التجهيز'));
     }
     if (status == OrderStatus.preparing) {
-      return FilledButton(onPressed: () => _setStatus(context, OrderStatus.readyForPickup), child: const Text('جاهز للاستلام'));
+      return FilledButton.icon(onPressed: () => _setStatus(context, OrderStatus.readyForPickup), icon: const Icon(Icons.inventory_2_outlined), label: const Text('جاهز للمندوب'));
     }
     return const SizedBox.shrink();
   }
+}
+
+class _ProductThumb extends StatelessWidget {
+  const _ProductThumb({required this.url});
+  final String url;
+  @override
+  Widget build(BuildContext context) => Container(
+        width: 44, height: 44, clipBehavior: Clip.antiAlias,
+        decoration: BoxDecoration(color: const Color(0xFFEAF2ED), borderRadius: BorderRadius.circular(12)),
+        child: url.isEmpty ? const Icon(Icons.inventory_2_outlined, size: 20, color: Color(0xFF0D6B4E)) : Image.network(url, fit: BoxFit.cover, errorBuilder: (_, __, ___) => const Icon(Icons.broken_image_outlined)),
+      );
+}
+
+String _formatTime(Object? value) {
+  final date = value is Timestamp ? value.toDate() : null;
+  if (date == null) return 'الآن';
+  final hour = date.hour % 12 == 0 ? 12 : date.hour % 12;
+  return '${date.day}/${date.month} • $hour:${date.minute.toString().padLeft(2, '0')} ${date.hour >= 12 ? 'م' : 'ص'}';
 }
 
 class _StateMessage extends StatelessWidget {

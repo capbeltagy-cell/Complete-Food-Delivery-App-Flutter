@@ -30,9 +30,9 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
               .where("status", whereIn: <String>[
                 'normal',
                 'received',
-                'accepted',
+                'acceptedByMerchant',
                 OrderStatus.waitingMerchantApproval.name,
-                OrderStatus.accepted.name,
+                OrderStatus.acceptedByMerchant.name,
                 OrderStatus.preparing.name,
                 OrderStatus.readyForPickup.name,
                 OrderStatus.pickedUpByRider.name,

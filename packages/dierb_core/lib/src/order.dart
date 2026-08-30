@@ -1,11 +1,11 @@
-enum OrderStatus { received, waitingMerchantApproval, accepted, preparing, readyForPickup, pickedUpByRider, onTheWay, delivered, rejected, cancelled }
+enum OrderStatus { received, waitingMerchantApproval, acceptedByMerchant, preparing, readyForPickup, pickedUpByRider, onTheWay, delivered, rejected, cancelled }
 
 extension OrderStatusText on OrderStatus {
   String get labelAr {
     switch (this) {
       case OrderStatus.received: return 'تم استلام الطلب';
       case OrderStatus.waitingMerchantApproval: return 'بانتظار قبول المتجر';
-      case OrderStatus.accepted: return 'تم القبول';
+      case OrderStatus.acceptedByMerchant: return 'تم قبول الطلب';
       case OrderStatus.preparing: return 'جاري التجهيز';
       case OrderStatus.readyForPickup: return 'جاهز للاستلام';
       case OrderStatus.pickedUpByRider: return 'استلمه المندوب';
@@ -24,6 +24,7 @@ abstract class OrderStatusCodec {
     final raw = value?.toString();
     switch (raw) {
       case 'normal': return OrderStatus.waitingMerchantApproval;
+      case 'accepted': return OrderStatus.acceptedByMerchant;
       case 'picking': return OrderStatus.readyForPickup;
       case 'delivering': return OrderStatus.onTheWay;
       case 'ended': return OrderStatus.delivered;
@@ -31,4 +32,9 @@ abstract class OrderStatusCodec {
     }
   }
   static String toStorage(OrderStatus status) => status.name;
+  static bool isIncoming(Object? value) => fromStorage(value) == OrderStatus.waitingMerchantApproval;
+  static bool isInProgress(Object? value) {
+    final status = fromStorage(value);
+    return status == OrderStatus.acceptedByMerchant || status == OrderStatus.preparing || status == OrderStatus.readyForPickup || status == OrderStatus.pickedUpByRider || status == OrderStatus.onTheWay;
+  }
 }

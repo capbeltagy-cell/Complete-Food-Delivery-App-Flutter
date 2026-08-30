@@ -137,6 +137,7 @@ class _RiderOrderCardState extends State<_RiderOrderCard> {
     final customer = data['customerName']?.toString() ?? 'العميل';
     final phone = data['customerPhone']?.toString() ?? '';
     final address = data['addressText']?.toString() ?? data['address']?.toString() ?? '';
+    final image = items.isEmpty ? '' : (items.first['image'] ?? '').toString();
 
     return Card(
       elevation: 0,
@@ -149,17 +150,14 @@ class _RiderOrderCardState extends State<_RiderOrderCard> {
           children: [
             Row(
               children: [
-                const CircleAvatar(
-                  backgroundColor: Color(0xFFE8F5EC),
-                  child: Icon(Icons.storefront_rounded, color: Color(0xFF166534)),
-                ),
+                _OrderThumb(url: image),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(store, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16)),
-                      Text(status.labelAr, style: const TextStyle(color: Color(0xFF166534), fontSize: 12)),
+                      Text(status.labelAr, style: const TextStyle(color: Color(0xFF0D6B4E), fontSize: 12, fontWeight: FontWeight.w800)),
                     ],
                   ),
                 ),
@@ -167,16 +165,10 @@ class _RiderOrderCardState extends State<_RiderOrderCard> {
               ],
             ),
             const Divider(height: 24),
-            Text('العميل: $customer', style: const TextStyle(fontWeight: FontWeight.w700)),
-            if (phone.isNotEmpty) Text('الهاتف: $phone'),
-            if (address.isNotEmpty) ...[
-              const SizedBox(height: 5),
-              Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                const Icon(Icons.location_on_outlined, size: 18),
-                const SizedBox(width: 5),
-                Expanded(child: Text(address)),
-              ]),
-            ],
+            _RoutePoint(icon: Icons.storefront_outlined, label: 'الاستلام من', value: store, color: const Color(0xFF0D6B4E)),
+            Container(margin: const EdgeInsetsDirectional.only(start: 16), width: 2, height: 15, color: const Color(0xFFD9E2DC)),
+            _RoutePoint(icon: Icons.location_on_outlined, label: 'التوصيل إلى', value: address.isEmpty ? customer : '$customer\n$address', color: const Color(0xFF2867B2)),
+            if (phone.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 8), child: Row(children: [const Icon(Icons.phone_outlined, size: 18, color: Color(0xFF68766F)), const SizedBox(width: 7), Text(phone, style: const TextStyle(fontWeight: FontWeight.w800))])),
             if (items.isNotEmpty) ...[
               const SizedBox(height: 10),
               Text(
@@ -248,6 +240,7 @@ class _RiderOrderCardState extends State<_RiderOrderCard> {
           'riderUID': user.uid,
           'riderName': riderName,
           'status': OrderStatus.pickedUpByRider.name,
+          'pickedUpAt': FieldValue.serverTimestamp(),
           'updatedAt': FieldValue.serverTimestamp(),
         });
       });
@@ -262,10 +255,13 @@ class _RiderOrderCardState extends State<_RiderOrderCard> {
   Future<void> _changeStatus(OrderStatus next) async {
     setState(() => _busy = true);
     try {
-      await widget.order.reference.update(<String, dynamic>{
+      final payload = <String, dynamic>{
         'status': next.name,
         'updatedAt': FieldValue.serverTimestamp(),
-      });
+      };
+      if (next == OrderStatus.onTheWay) payload['onTheWayAt'] = FieldValue.serverTimestamp();
+      if (next == OrderStatus.delivered) payload['deliveredAt'] = FieldValue.serverTimestamp();
+      await widget.order.reference.update(payload);
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(next.labelAr)));
     } catch (error) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.toString())));
@@ -273,6 +269,31 @@ class _RiderOrderCardState extends State<_RiderOrderCard> {
       if (mounted) setState(() => _busy = false);
     }
   }
+}
+
+class _OrderThumb extends StatelessWidget {
+  const _OrderThumb({required this.url});
+  final String url;
+  @override
+  Widget build(BuildContext context) => Container(
+        width: 50, height: 50, clipBehavior: Clip.antiAlias,
+        decoration: BoxDecoration(color: const Color(0xFFE8F5EC), borderRadius: BorderRadius.circular(15)),
+        child: url.isEmpty ? const Icon(Icons.storefront_rounded, color: Color(0xFF0D6B4E)) : Image.network(url, fit: BoxFit.cover, errorBuilder: (_, __, ___) => const Icon(Icons.broken_image_outlined)),
+      );
+}
+
+class _RoutePoint extends StatelessWidget {
+  const _RoutePoint({required this.icon, required this.label, required this.value, required this.color});
+  final IconData icon;
+  final String label;
+  final String value;
+  final Color color;
+  @override
+  Widget build(BuildContext context) => Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Container(width: 34, height: 34, decoration: BoxDecoration(color: color.withValues(alpha: .1), shape: BoxShape.circle), child: Icon(icon, size: 19, color: color)),
+        const SizedBox(width: 9),
+        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(label, style: const TextStyle(color: Color(0xFF68766F), fontSize: 11)), Text(value, style: const TextStyle(fontWeight: FontWeight.w800, height: 1.35))])),
+      ]);
 }
 
 class _MessageState extends StatelessWidget {
