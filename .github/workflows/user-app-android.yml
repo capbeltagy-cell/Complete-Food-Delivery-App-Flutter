@@ -101,7 +101,1109 @@ jobs:
           grep -q "projectId: 'dierb-29548'" lib/main.dart
           grep -q 'applicationId "com.dierb.merchant"' android/app/build.gradle
           test -f android/app/src/main/kotlin/com/dierb/merchant/MainActivity.kt
-          grep -q '^package com.dierb.merchant      - name: Configure optional merchant signing
+          grep -q '^package com.dierb.merchant
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
+        run: |
+          if [[ -n "$ANDROID_KEYSTORE_BASE64" ]]; then
+            printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/app/dierb-upload-key.jks
+            printf 'storePassword=%s\nkeyPassword=%s\nkeyAlias=%s\nstoreFile=%s\n' "$ANDROID_STORE_PASSWORD" "$ANDROID_KEY_PASSWORD" "$ANDROID_KEY_ALIAS" "$GITHUB_WORKSPACE/seller_app/android/app/dierb-upload-key.jks" > android/key.properties
+          fi
+      - run: flutter pub get
+      - run: flutter analyze --no-fatal-warnings --no-fatal-infos
+      - run: flutter build apk --release
+      - run: flutter build appbundle --release
+      - name: Stage merchant artifacts
+        run: |
+          mkdir -p build/ci-artifacts
+          cp build/app/outputs/flutter-apk/app-release.apk build/ci-artifacts/Dierb-Merchant-release.apk
+          cp build/app/outputs/bundle/release/app-release.aab build/ci-artifacts/Dierb-Merchant-release.aab
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Dierb-Merchant-APK
+          path: seller_app/build/ci-artifacts/Dierb-Merchant-release.apk
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Dierb-Merchant-AAB
+          path: seller_app/build/ci-artifacts/Dierb-Merchant-release.aab
+          if-no-files-found: error
+
+  rider:
+    name: Rider APK and AAB
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    defaults:
+      run:
+        shell: bash
+        working-directory: rider_app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: gradle
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.47.1"
+          channel: stable
+          cache: true
+      - name: Verify Dierb rider Firebase configuration
+        run: |
+          grep -q "projectId: 'dierb-29548'" lib/main.dart
+          grep -q 'applicationId "com.dierb.rider"' android/app/build.gradle
+          test -f android/app/src/main/kotlin/com/dierb/rider/MainActivity.kt
+          grep -q '^package com.dierb.rider
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
+        run: |
+          if [[ -n "$ANDROID_KEYSTORE_BASE64" ]]; then
+            printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/app/dierb-upload-key.jks
+            printf 'storePassword=%s\nkeyPassword=%s\nkeyAlias=%s\nstoreFile=%s\n' "$ANDROID_STORE_PASSWORD" "$ANDROID_KEY_PASSWORD" "$ANDROID_KEY_ALIAS" "$GITHUB_WORKSPACE/rider_app/android/app/dierb-upload-key.jks" > android/key.properties
+          fi
+      - run: flutter pub get
+      - run: flutter analyze --no-fatal-warnings --no-fatal-infos
+      - run: flutter build apk --release
+      - run: flutter build appbundle --release
+      - name: Stage rider artifacts
+        run: |
+          mkdir -p build/ci-artifacts
+          cp build/app/outputs/flutter-apk/app-release.apk build/ci-artifacts/Dierb-Rider-release.apk
+          cp build/app/outputs/bundle/release/app-release.aab build/ci-artifacts/Dierb-Rider-release.aab
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Dierb-Rider-APK
+          path: rider_app/build/ci-artifacts/Dierb-Rider-release.apk
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Dierb-Rider-AAB
+          path: rider_app/build/ci-artifacts/Dierb-Rider-release.aab
+          if-no-files-found: error
+
+  admin-web:
+    name: Admin web build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: bash
+        working-directory: admin_web_portal
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.47.1"
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: flutter analyze --no-fatal-warnings --no-fatal-infos
+      - run: flutter build web --release
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Dierb-Admin-Web
+          path: admin_web_portal/build/web
+          if-no-files-found: error
+ android/app/src/main/kotlin/com/dierb/merchant/MainActivity.kt
+      - name: Configure optional merchant signing
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
+        run: |
+          if [[ -n "$ANDROID_KEYSTORE_BASE64" ]]; then
+            printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/app/dierb-upload-key.jks
+            printf 'storePassword=%s\nkeyPassword=%s\nkeyAlias=%s\nstoreFile=%s\n' "$ANDROID_STORE_PASSWORD" "$ANDROID_KEY_PASSWORD" "$ANDROID_KEY_ALIAS" "$GITHUB_WORKSPACE/seller_app/android/app/dierb-upload-key.jks" > android/key.properties
+          fi
+      - run: flutter pub get
+      - run: flutter analyze --no-fatal-warnings --no-fatal-infos
+      - run: flutter build apk --release
+      - run: flutter build appbundle --release
+      - name: Stage merchant artifacts
+        run: |
+          mkdir -p build/ci-artifacts
+          cp build/app/outputs/flutter-apk/app-release.apk build/ci-artifacts/Dierb-Merchant-release.apk
+          cp build/app/outputs/bundle/release/app-release.aab build/ci-artifacts/Dierb-Merchant-release.aab
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Dierb-Merchant-APK
+          path: seller_app/build/ci-artifacts/Dierb-Merchant-release.apk
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Dierb-Merchant-AAB
+          path: seller_app/build/ci-artifacts/Dierb-Merchant-release.aab
+          if-no-files-found: error
+
+  rider:
+    name: Rider APK and AAB
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    defaults:
+      run:
+        shell: bash
+        working-directory: rider_app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: gradle
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.47.1"
+          channel: stable
+          cache: true
+      - name: Verify Dierb rider Firebase configuration
+        run: |
+          grep -q "projectId: 'dierb-29548'" lib/main.dart
+          grep -q 'applicationId "com.dierb.rider"' android/app/build.gradle
+      - name: Configure optional rider signing
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
+        run: |
+          if [[ -n "$ANDROID_KEYSTORE_BASE64" ]]; then
+            printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/app/dierb-upload-key.jks
+            printf 'storePassword=%s\nkeyPassword=%s\nkeyAlias=%s\nstoreFile=%s\n' "$ANDROID_STORE_PASSWORD" "$ANDROID_KEY_PASSWORD" "$ANDROID_KEY_ALIAS" "$GITHUB_WORKSPACE/rider_app/android/app/dierb-upload-key.jks" > android/key.properties
+          fi
+      - run: flutter pub get
+      - run: flutter analyze --no-fatal-warnings --no-fatal-infos
+      - run: flutter build apk --release
+      - run: flutter build appbundle --release
+      - name: Stage rider artifacts
+        run: |
+          mkdir -p build/ci-artifacts
+          cp build/app/outputs/flutter-apk/app-release.apk build/ci-artifacts/Dierb-Rider-release.apk
+          cp build/app/outputs/bundle/release/app-release.aab build/ci-artifacts/Dierb-Rider-release.aab
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Dierb-Rider-APK
+          path: rider_app/build/ci-artifacts/Dierb-Rider-release.apk
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Dierb-Rider-AAB
+          path: rider_app/build/ci-artifacts/Dierb-Rider-release.aab
+          if-no-files-found: error
+
+  admin-web:
+    name: Admin web build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: bash
+        working-directory: admin_web_portal
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.47.1"
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: flutter analyze --no-fatal-warnings --no-fatal-infos
+      - run: flutter build web --release
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Dierb-Admin-Web
+          path: admin_web_portal/build/web
+          if-no-files-found: error
+ android/app/src/main/kotlin/com/dierb/rider/MainActivity.kt
+      - name: Configure optional rider signing
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
+        run: |
+          if [[ -n "$ANDROID_KEYSTORE_BASE64" ]]; then
+            printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/app/dierb-upload-key.jks
+            printf 'storePassword=%s\nkeyPassword=%s\nkeyAlias=%s\nstoreFile=%s\n' "$ANDROID_STORE_PASSWORD" "$ANDROID_KEY_PASSWORD" "$ANDROID_KEY_ALIAS" "$GITHUB_WORKSPACE/rider_app/android/app/dierb-upload-key.jks" > android/key.properties
+          fi
+      - run: flutter pub get
+      - run: flutter analyze --no-fatal-warnings --no-fatal-infos
+      - run: flutter build apk --release
+      - run: flutter build appbundle --release
+      - name: Stage rider artifacts
+        run: |
+          mkdir -p build/ci-artifacts
+          cp build/app/outputs/flutter-apk/app-release.apk build/ci-artifacts/Dierb-Rider-release.apk
+          cp build/app/outputs/bundle/release/app-release.aab build/ci-artifacts/Dierb-Rider-release.aab
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Dierb-Rider-APK
+          path: rider_app/build/ci-artifacts/Dierb-Rider-release.apk
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Dierb-Rider-AAB
+          path: rider_app/build/ci-artifacts/Dierb-Rider-release.aab
+          if-no-files-found: error
+
+  admin-web:
+    name: Admin web build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: bash
+        working-directory: admin_web_portal
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.47.1"
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: flutter analyze --no-fatal-warnings --no-fatal-infos
+      - run: flutter build web --release
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Dierb-Admin-Web
+          path: admin_web_portal/build/web
+          if-no-files-found: error
+ android/app/src/main/kotlin/com/dierb/merchant/MainActivity.kt
+      - name: Configure optional merchant signing
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
+        run: |
+          if [[ -n "$ANDROID_KEYSTORE_BASE64" ]]; then
+            printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/app/dierb-upload-key.jks
+            printf 'storePassword=%s\nkeyPassword=%s\nkeyAlias=%s\nstoreFile=%s\n' "$ANDROID_STORE_PASSWORD" "$ANDROID_KEY_PASSWORD" "$ANDROID_KEY_ALIAS" "$GITHUB_WORKSPACE/seller_app/android/app/dierb-upload-key.jks" > android/key.properties
+          fi
+      - run: flutter pub get
+      - run: flutter analyze --no-fatal-warnings --no-fatal-infos
+      - run: flutter build apk --release
+      - run: flutter build appbundle --release
+      - name: Stage merchant artifacts
+        run: |
+          mkdir -p build/ci-artifacts
+          cp build/app/outputs/flutter-apk/app-release.apk build/ci-artifacts/Dierb-Merchant-release.apk
+          cp build/app/outputs/bundle/release/app-release.aab build/ci-artifacts/Dierb-Merchant-release.aab
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Dierb-Merchant-APK
+          path: seller_app/build/ci-artifacts/Dierb-Merchant-release.apk
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Dierb-Merchant-AAB
+          path: seller_app/build/ci-artifacts/Dierb-Merchant-release.aab
+          if-no-files-found: error
+
+  rider:
+    name: Rider APK and AAB
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    defaults:
+      run:
+        shell: bash
+        working-directory: rider_app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: gradle
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.47.1"
+          channel: stable
+          cache: true
+      - name: Verify Dierb rider Firebase configuration
+        run: |
+          grep -q "projectId: 'dierb-29548'" lib/main.dart
+          grep -q 'applicationId "com.dierb.rider"' android/app/build.gradle
+      - name: Configure optional rider signing
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
+        run: |
+          if [[ -n "$ANDROID_KEYSTORE_BASE64" ]]; then
+            printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/app/dierb-upload-key.jks
+            printf 'storePassword=%s\nkeyPassword=%s\nkeyAlias=%s\nstoreFile=%s\n' "$ANDROID_STORE_PASSWORD" "$ANDROID_KEY_PASSWORD" "$ANDROID_KEY_ALIAS" "$GITHUB_WORKSPACE/rider_app/android/app/dierb-upload-key.jks" > android/key.properties
+          fi
+      - run: flutter pub get
+      - run: flutter analyze --no-fatal-warnings --no-fatal-infos
+      - run: flutter build apk --release
+      - run: flutter build appbundle --release
+      - name: Stage rider artifacts
+        run: |
+          mkdir -p build/ci-artifacts
+          cp build/app/outputs/flutter-apk/app-release.apk build/ci-artifacts/Dierb-Rider-release.apk
+          cp build/app/outputs/bundle/release/app-release.aab build/ci-artifacts/Dierb-Rider-release.aab
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Dierb-Rider-APK
+          path: rider_app/build/ci-artifacts/Dierb-Rider-release.apk
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Dierb-Rider-AAB
+          path: rider_app/build/ci-artifacts/Dierb-Rider-release.aab
+          if-no-files-found: error
+
+  admin-web:
+    name: Admin web build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: bash
+        working-directory: admin_web_portal
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.47.1"
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: flutter analyze --no-fatal-warnings --no-fatal-infos
+      - run: flutter build web --release
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Dierb-Admin-Web
+          path: admin_web_portal/build/web
+          if-no-files-found: error
+ android/app/src/main/kotlin/com/dierb/merchant/MainActivity.kt
+      - name: Configure optional merchant signing
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
+        run: |
+          if [[ -n "$ANDROID_KEYSTORE_BASE64" ]]; then
+            printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/app/dierb-upload-key.jks
+            printf 'storePassword=%s\nkeyPassword=%s\nkeyAlias=%s\nstoreFile=%s\n' "$ANDROID_STORE_PASSWORD" "$ANDROID_KEY_PASSWORD" "$ANDROID_KEY_ALIAS" "$GITHUB_WORKSPACE/seller_app/android/app/dierb-upload-key.jks" > android/key.properties
+          fi
+      - run: flutter pub get
+      - run: flutter analyze --no-fatal-warnings --no-fatal-infos
+      - run: flutter build apk --release
+      - run: flutter build appbundle --release
+      - name: Stage merchant artifacts
+        run: |
+          mkdir -p build/ci-artifacts
+          cp build/app/outputs/flutter-apk/app-release.apk build/ci-artifacts/Dierb-Merchant-release.apk
+          cp build/app/outputs/bundle/release/app-release.aab build/ci-artifacts/Dierb-Merchant-release.aab
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Dierb-Merchant-APK
+          path: seller_app/build/ci-artifacts/Dierb-Merchant-release.apk
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Dierb-Merchant-AAB
+          path: seller_app/build/ci-artifacts/Dierb-Merchant-release.aab
+          if-no-files-found: error
+
+  rider:
+    name: Rider APK and AAB
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    defaults:
+      run:
+        shell: bash
+        working-directory: rider_app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: gradle
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.47.1"
+          channel: stable
+          cache: true
+      - name: Verify Dierb rider Firebase configuration
+        run: |
+          grep -q "projectId: 'dierb-29548'" lib/main.dart
+          grep -q 'applicationId "com.dierb.rider"' android/app/build.gradle
+          test -f android/app/src/main/kotlin/com/dierb/rider/MainActivity.kt
+          grep -q '^package com.dierb.rider      - name: Configure optional rider signing
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
+        run: |
+          if [[ -n "$ANDROID_KEYSTORE_BASE64" ]]; then
+            printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/app/dierb-upload-key.jks
+            printf 'storePassword=%s\nkeyPassword=%s\nkeyAlias=%s\nstoreFile=%s\n' "$ANDROID_STORE_PASSWORD" "$ANDROID_KEY_PASSWORD" "$ANDROID_KEY_ALIAS" "$GITHUB_WORKSPACE/rider_app/android/app/dierb-upload-key.jks" > android/key.properties
+          fi
+      - run: flutter pub get
+      - run: flutter analyze --no-fatal-warnings --no-fatal-infos
+      - run: flutter build apk --release
+      - run: flutter build appbundle --release
+      - name: Stage rider artifacts
+        run: |
+          mkdir -p build/ci-artifacts
+          cp build/app/outputs/flutter-apk/app-release.apk build/ci-artifacts/Dierb-Rider-release.apk
+          cp build/app/outputs/bundle/release/app-release.aab build/ci-artifacts/Dierb-Rider-release.aab
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Dierb-Rider-APK
+          path: rider_app/build/ci-artifacts/Dierb-Rider-release.apk
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Dierb-Rider-AAB
+          path: rider_app/build/ci-artifacts/Dierb-Rider-release.aab
+          if-no-files-found: error
+
+  admin-web:
+    name: Admin web build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: bash
+        working-directory: admin_web_portal
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.47.1"
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: flutter analyze --no-fatal-warnings --no-fatal-infos
+      - run: flutter build web --release
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Dierb-Admin-Web
+          path: admin_web_portal/build/web
+          if-no-files-found: error
+ android/app/src/main/kotlin/com/dierb/merchant/MainActivity.kt
+      - name: Configure optional merchant signing
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
+        run: |
+          if [[ -n "$ANDROID_KEYSTORE_BASE64" ]]; then
+            printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/app/dierb-upload-key.jks
+            printf 'storePassword=%s\nkeyPassword=%s\nkeyAlias=%s\nstoreFile=%s\n' "$ANDROID_STORE_PASSWORD" "$ANDROID_KEY_PASSWORD" "$ANDROID_KEY_ALIAS" "$GITHUB_WORKSPACE/seller_app/android/app/dierb-upload-key.jks" > android/key.properties
+          fi
+      - run: flutter pub get
+      - run: flutter analyze --no-fatal-warnings --no-fatal-infos
+      - run: flutter build apk --release
+      - run: flutter build appbundle --release
+      - name: Stage merchant artifacts
+        run: |
+          mkdir -p build/ci-artifacts
+          cp build/app/outputs/flutter-apk/app-release.apk build/ci-artifacts/Dierb-Merchant-release.apk
+          cp build/app/outputs/bundle/release/app-release.aab build/ci-artifacts/Dierb-Merchant-release.aab
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Dierb-Merchant-APK
+          path: seller_app/build/ci-artifacts/Dierb-Merchant-release.apk
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Dierb-Merchant-AAB
+          path: seller_app/build/ci-artifacts/Dierb-Merchant-release.aab
+          if-no-files-found: error
+
+  rider:
+    name: Rider APK and AAB
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    defaults:
+      run:
+        shell: bash
+        working-directory: rider_app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: gradle
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.47.1"
+          channel: stable
+          cache: true
+      - name: Verify Dierb rider Firebase configuration
+        run: |
+          grep -q "projectId: 'dierb-29548'" lib/main.dart
+          grep -q 'applicationId "com.dierb.rider"' android/app/build.gradle
+      - name: Configure optional rider signing
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
+        run: |
+          if [[ -n "$ANDROID_KEYSTORE_BASE64" ]]; then
+            printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/app/dierb-upload-key.jks
+            printf 'storePassword=%s\nkeyPassword=%s\nkeyAlias=%s\nstoreFile=%s\n' "$ANDROID_STORE_PASSWORD" "$ANDROID_KEY_PASSWORD" "$ANDROID_KEY_ALIAS" "$GITHUB_WORKSPACE/rider_app/android/app/dierb-upload-key.jks" > android/key.properties
+          fi
+      - run: flutter pub get
+      - run: flutter analyze --no-fatal-warnings --no-fatal-infos
+      - run: flutter build apk --release
+      - run: flutter build appbundle --release
+      - name: Stage rider artifacts
+        run: |
+          mkdir -p build/ci-artifacts
+          cp build/app/outputs/flutter-apk/app-release.apk build/ci-artifacts/Dierb-Rider-release.apk
+          cp build/app/outputs/bundle/release/app-release.aab build/ci-artifacts/Dierb-Rider-release.aab
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Dierb-Rider-APK
+          path: rider_app/build/ci-artifacts/Dierb-Rider-release.apk
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Dierb-Rider-AAB
+          path: rider_app/build/ci-artifacts/Dierb-Rider-release.aab
+          if-no-files-found: error
+
+  admin-web:
+    name: Admin web build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: bash
+        working-directory: admin_web_portal
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.47.1"
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: flutter analyze --no-fatal-warnings --no-fatal-infos
+      - run: flutter build web --release
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Dierb-Admin-Web
+          path: admin_web_portal/build/web
+          if-no-files-found: error
+ android/app/src/main/kotlin/com/dierb/rider/MainActivity.kt
+      - name: Configure optional rider signing
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
+        run: |
+          if [[ -n "$ANDROID_KEYSTORE_BASE64" ]]; then
+            printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/app/dierb-upload-key.jks
+            printf 'storePassword=%s\nkeyPassword=%s\nkeyAlias=%s\nstoreFile=%s\n' "$ANDROID_STORE_PASSWORD" "$ANDROID_KEY_PASSWORD" "$ANDROID_KEY_ALIAS" "$GITHUB_WORKSPACE/rider_app/android/app/dierb-upload-key.jks" > android/key.properties
+          fi
+      - run: flutter pub get
+      - run: flutter analyze --no-fatal-warnings --no-fatal-infos
+      - run: flutter build apk --release
+      - run: flutter build appbundle --release
+      - name: Stage rider artifacts
+        run: |
+          mkdir -p build/ci-artifacts
+          cp build/app/outputs/flutter-apk/app-release.apk build/ci-artifacts/Dierb-Rider-release.apk
+          cp build/app/outputs/bundle/release/app-release.aab build/ci-artifacts/Dierb-Rider-release.aab
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Dierb-Rider-APK
+          path: rider_app/build/ci-artifacts/Dierb-Rider-release.apk
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Dierb-Rider-AAB
+          path: rider_app/build/ci-artifacts/Dierb-Rider-release.aab
+          if-no-files-found: error
+
+  admin-web:
+    name: Admin web build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: bash
+        working-directory: admin_web_portal
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.47.1"
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: flutter analyze --no-fatal-warnings --no-fatal-infos
+      - run: flutter build web --release
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Dierb-Admin-Web
+          path: admin_web_portal/build/web
+          if-no-files-found: error
+ android/app/src/main/kotlin/com/dierb/merchant/MainActivity.kt
+      - name: Configure optional merchant signing
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
+        run: |
+          if [[ -n "$ANDROID_KEYSTORE_BASE64" ]]; then
+            printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/app/dierb-upload-key.jks
+            printf 'storePassword=%s\nkeyPassword=%s\nkeyAlias=%s\nstoreFile=%s\n' "$ANDROID_STORE_PASSWORD" "$ANDROID_KEY_PASSWORD" "$ANDROID_KEY_ALIAS" "$GITHUB_WORKSPACE/seller_app/android/app/dierb-upload-key.jks" > android/key.properties
+          fi
+      - run: flutter pub get
+      - run: flutter analyze --no-fatal-warnings --no-fatal-infos
+      - run: flutter build apk --release
+      - run: flutter build appbundle --release
+      - name: Stage merchant artifacts
+        run: |
+          mkdir -p build/ci-artifacts
+          cp build/app/outputs/flutter-apk/app-release.apk build/ci-artifacts/Dierb-Merchant-release.apk
+          cp build/app/outputs/bundle/release/app-release.aab build/ci-artifacts/Dierb-Merchant-release.aab
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Dierb-Merchant-APK
+          path: seller_app/build/ci-artifacts/Dierb-Merchant-release.apk
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Dierb-Merchant-AAB
+          path: seller_app/build/ci-artifacts/Dierb-Merchant-release.aab
+          if-no-files-found: error
+
+  rider:
+    name: Rider APK and AAB
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    defaults:
+      run:
+        shell: bash
+        working-directory: rider_app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: gradle
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.47.1"
+          channel: stable
+          cache: true
+      - name: Verify Dierb rider Firebase configuration
+        run: |
+          grep -q "projectId: 'dierb-29548'" lib/main.dart
+          grep -q 'applicationId "com.dierb.rider"' android/app/build.gradle
+      - name: Configure optional rider signing
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
+        run: |
+          if [[ -n "$ANDROID_KEYSTORE_BASE64" ]]; then
+            printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/app/dierb-upload-key.jks
+            printf 'storePassword=%s\nkeyPassword=%s\nkeyAlias=%s\nstoreFile=%s\n' "$ANDROID_STORE_PASSWORD" "$ANDROID_KEY_PASSWORD" "$ANDROID_KEY_ALIAS" "$GITHUB_WORKSPACE/rider_app/android/app/dierb-upload-key.jks" > android/key.properties
+          fi
+      - run: flutter pub get
+      - run: flutter analyze --no-fatal-warnings --no-fatal-infos
+      - run: flutter build apk --release
+      - run: flutter build appbundle --release
+      - name: Stage rider artifacts
+        run: |
+          mkdir -p build/ci-artifacts
+          cp build/app/outputs/flutter-apk/app-release.apk build/ci-artifacts/Dierb-Rider-release.apk
+          cp build/app/outputs/bundle/release/app-release.aab build/ci-artifacts/Dierb-Rider-release.aab
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Dierb-Rider-APK
+          path: rider_app/build/ci-artifacts/Dierb-Rider-release.apk
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Dierb-Rider-AAB
+          path: rider_app/build/ci-artifacts/Dierb-Rider-release.aab
+          if-no-files-found: error
+
+  admin-web:
+    name: Admin web build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: bash
+        working-directory: admin_web_portal
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.47.1"
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: flutter analyze --no-fatal-warnings --no-fatal-infos
+      - run: flutter build web --release
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Dierb-Admin-Web
+          path: admin_web_portal/build/web
+          if-no-files-found: error
+ android/app/src/main/kotlin/com/dierb/rider/MainActivity.kt
+      - name: Configure optional rider signing
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
+        run: |
+          if [[ -n "$ANDROID_KEYSTORE_BASE64" ]]; then
+            printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/app/dierb-upload-key.jks
+            printf 'storePassword=%s\nkeyPassword=%s\nkeyAlias=%s\nstoreFile=%s\n' "$ANDROID_STORE_PASSWORD" "$ANDROID_KEY_PASSWORD" "$ANDROID_KEY_ALIAS" "$GITHUB_WORKSPACE/rider_app/android/app/dierb-upload-key.jks" > android/key.properties
+          fi
+      - run: flutter pub get
+      - run: flutter analyze --no-fatal-warnings --no-fatal-infos
+      - run: flutter build apk --release
+      - run: flutter build appbundle --release
+      - name: Stage rider artifacts
+        run: |
+          mkdir -p build/ci-artifacts
+          cp build/app/outputs/flutter-apk/app-release.apk build/ci-artifacts/Dierb-Rider-release.apk
+          cp build/app/outputs/bundle/release/app-release.aab build/ci-artifacts/Dierb-Rider-release.aab
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Dierb-Rider-APK
+          path: rider_app/build/ci-artifacts/Dierb-Rider-release.apk
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Dierb-Rider-AAB
+          path: rider_app/build/ci-artifacts/Dierb-Rider-release.aab
+          if-no-files-found: error
+
+  admin-web:
+    name: Admin web build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: bash
+        working-directory: admin_web_portal
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.47.1"
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: flutter analyze --no-fatal-warnings --no-fatal-infos
+      - run: flutter build web --release
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Dierb-Admin-Web
+          path: admin_web_portal/build/web
+          if-no-files-found: error
+ android/app/src/main/kotlin/com/dierb/merchant/MainActivity.kt
+      - name: Configure optional merchant signing
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
+        run: |
+          if [[ -n "$ANDROID_KEYSTORE_BASE64" ]]; then
+            printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/app/dierb-upload-key.jks
+            printf 'storePassword=%s\nkeyPassword=%s\nkeyAlias=%s\nstoreFile=%s\n' "$ANDROID_STORE_PASSWORD" "$ANDROID_KEY_PASSWORD" "$ANDROID_KEY_ALIAS" "$GITHUB_WORKSPACE/seller_app/android/app/dierb-upload-key.jks" > android/key.properties
+          fi
+      - run: flutter pub get
+      - run: flutter analyze --no-fatal-warnings --no-fatal-infos
+      - run: flutter build apk --release
+      - run: flutter build appbundle --release
+      - name: Stage merchant artifacts
+        run: |
+          mkdir -p build/ci-artifacts
+          cp build/app/outputs/flutter-apk/app-release.apk build/ci-artifacts/Dierb-Merchant-release.apk
+          cp build/app/outputs/bundle/release/app-release.aab build/ci-artifacts/Dierb-Merchant-release.aab
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Dierb-Merchant-APK
+          path: seller_app/build/ci-artifacts/Dierb-Merchant-release.apk
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Dierb-Merchant-AAB
+          path: seller_app/build/ci-artifacts/Dierb-Merchant-release.aab
+          if-no-files-found: error
+
+  rider:
+    name: Rider APK and AAB
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    defaults:
+      run:
+        shell: bash
+        working-directory: rider_app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: gradle
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.47.1"
+          channel: stable
+          cache: true
+      - name: Verify Dierb rider Firebase configuration
+        run: |
+          grep -q "projectId: 'dierb-29548'" lib/main.dart
+          grep -q 'applicationId "com.dierb.rider"' android/app/build.gradle
+      - name: Configure optional rider signing
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
+        run: |
+          if [[ -n "$ANDROID_KEYSTORE_BASE64" ]]; then
+            printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/app/dierb-upload-key.jks
+            printf 'storePassword=%s\nkeyPassword=%s\nkeyAlias=%s\nstoreFile=%s\n' "$ANDROID_STORE_PASSWORD" "$ANDROID_KEY_PASSWORD" "$ANDROID_KEY_ALIAS" "$GITHUB_WORKSPACE/rider_app/android/app/dierb-upload-key.jks" > android/key.properties
+          fi
+      - run: flutter pub get
+      - run: flutter analyze --no-fatal-warnings --no-fatal-infos
+      - run: flutter build apk --release
+      - run: flutter build appbundle --release
+      - name: Stage rider artifacts
+        run: |
+          mkdir -p build/ci-artifacts
+          cp build/app/outputs/flutter-apk/app-release.apk build/ci-artifacts/Dierb-Rider-release.apk
+          cp build/app/outputs/bundle/release/app-release.aab build/ci-artifacts/Dierb-Rider-release.aab
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Dierb-Rider-APK
+          path: rider_app/build/ci-artifacts/Dierb-Rider-release.apk
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Dierb-Rider-AAB
+          path: rider_app/build/ci-artifacts/Dierb-Rider-release.aab
+          if-no-files-found: error
+
+  admin-web:
+    name: Admin web build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: bash
+        working-directory: admin_web_portal
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.47.1"
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: flutter analyze --no-fatal-warnings --no-fatal-infos
+      - run: flutter build web --release
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Dierb-Admin-Web
+          path: admin_web_portal/build/web
+          if-no-files-found: error
+ android/app/src/main/kotlin/com/dierb/rider/MainActivity.kt
+      - name: Configure optional rider signing
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
+        run: |
+          if [[ -n "$ANDROID_KEYSTORE_BASE64" ]]; then
+            printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/app/dierb-upload-key.jks
+            printf 'storePassword=%s\nkeyPassword=%s\nkeyAlias=%s\nstoreFile=%s\n' "$ANDROID_STORE_PASSWORD" "$ANDROID_KEY_PASSWORD" "$ANDROID_KEY_ALIAS" "$GITHUB_WORKSPACE/rider_app/android/app/dierb-upload-key.jks" > android/key.properties
+          fi
+      - run: flutter pub get
+      - run: flutter analyze --no-fatal-warnings --no-fatal-infos
+      - run: flutter build apk --release
+      - run: flutter build appbundle --release
+      - name: Stage rider artifacts
+        run: |
+          mkdir -p build/ci-artifacts
+          cp build/app/outputs/flutter-apk/app-release.apk build/ci-artifacts/Dierb-Rider-release.apk
+          cp build/app/outputs/bundle/release/app-release.aab build/ci-artifacts/Dierb-Rider-release.aab
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Dierb-Rider-APK
+          path: rider_app/build/ci-artifacts/Dierb-Rider-release.apk
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Dierb-Rider-AAB
+          path: rider_app/build/ci-artifacts/Dierb-Rider-release.aab
+          if-no-files-found: error
+
+  admin-web:
+    name: Admin web build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: bash
+        working-directory: admin_web_portal
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.47.1"
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: flutter analyze --no-fatal-warnings --no-fatal-infos
+      - run: flutter build web --release
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Dierb-Admin-Web
+          path: admin_web_portal/build/web
+          if-no-files-found: error
+ android/app/src/main/kotlin/com/dierb/merchant/MainActivity.kt
+      - name: Configure optional merchant signing
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
+        run: |
+          if [[ -n "$ANDROID_KEYSTORE_BASE64" ]]; then
+            printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/app/dierb-upload-key.jks
+            printf 'storePassword=%s\nkeyPassword=%s\nkeyAlias=%s\nstoreFile=%s\n' "$ANDROID_STORE_PASSWORD" "$ANDROID_KEY_PASSWORD" "$ANDROID_KEY_ALIAS" "$GITHUB_WORKSPACE/seller_app/android/app/dierb-upload-key.jks" > android/key.properties
+          fi
+      - run: flutter pub get
+      - run: flutter analyze --no-fatal-warnings --no-fatal-infos
+      - run: flutter build apk --release
+      - run: flutter build appbundle --release
+      - name: Stage merchant artifacts
+        run: |
+          mkdir -p build/ci-artifacts
+          cp build/app/outputs/flutter-apk/app-release.apk build/ci-artifacts/Dierb-Merchant-release.apk
+          cp build/app/outputs/bundle/release/app-release.aab build/ci-artifacts/Dierb-Merchant-release.aab
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Dierb-Merchant-APK
+          path: seller_app/build/ci-artifacts/Dierb-Merchant-release.apk
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Dierb-Merchant-AAB
+          path: seller_app/build/ci-artifacts/Dierb-Merchant-release.aab
+          if-no-files-found: error
+
+  rider:
+    name: Rider APK and AAB
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    defaults:
+      run:
+        shell: bash
+        working-directory: rider_app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: gradle
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.47.1"
+          channel: stable
+          cache: true
+      - name: Verify Dierb rider Firebase configuration
+        run: |
+          grep -q "projectId: 'dierb-29548'" lib/main.dart
+          grep -q 'applicationId "com.dierb.rider"' android/app/build.gradle
+      - name: Configure optional rider signing
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
+        run: |
+          if [[ -n "$ANDROID_KEYSTORE_BASE64" ]]; then
+            printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/app/dierb-upload-key.jks
+            printf 'storePassword=%s\nkeyPassword=%s\nkeyAlias=%s\nstoreFile=%s\n' "$ANDROID_STORE_PASSWORD" "$ANDROID_KEY_PASSWORD" "$ANDROID_KEY_ALIAS" "$GITHUB_WORKSPACE/rider_app/android/app/dierb-upload-key.jks" > android/key.properties
+          fi
+      - run: flutter pub get
+      - run: flutter analyze --no-fatal-warnings --no-fatal-infos
+      - run: flutter build apk --release
+      - run: flutter build appbundle --release
+      - name: Stage rider artifacts
+        run: |
+          mkdir -p build/ci-artifacts
+          cp build/app/outputs/flutter-apk/app-release.apk build/ci-artifacts/Dierb-Rider-release.apk
+          cp build/app/outputs/bundle/release/app-release.aab build/ci-artifacts/Dierb-Rider-release.aab
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Dierb-Rider-APK
+          path: rider_app/build/ci-artifacts/Dierb-Rider-release.apk
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Dierb-Rider-AAB
+          path: rider_app/build/ci-artifacts/Dierb-Rider-release.aab
+          if-no-files-found: error
+
+  admin-web:
+    name: Admin web build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: bash
+        working-directory: admin_web_portal
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.47.1"
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: flutter analyze --no-fatal-warnings --no-fatal-infos
+      - run: flutter build web --release
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Dierb-Admin-Web
+          path: admin_web_portal/build/web
+          if-no-files-found: error
+ android/app/src/main/kotlin/com/dierb/merchant/MainActivity.kt
+      - name: Configure optional merchant signing
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
