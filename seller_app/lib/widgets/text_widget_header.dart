@@ -23,6 +23,7 @@ class TextWidgetHeader extends SliverPersistentHeaderDelegate {
           child: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis,
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
               fontWeight: FontWeight.w900, color: colors.onSurface),
+          ),
         ),
       ),
     );

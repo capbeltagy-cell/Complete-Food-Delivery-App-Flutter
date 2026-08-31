@@ -42,21 +42,27 @@ abstract class OrderStatusCodec {
   /// Role-specific clients and backend rules must never skip these edges.
   static bool canTransition(OrderStatus current, OrderStatus next) {
     if (current.isTerminal || current == next) return false;
-    return switch (current) {
-      OrderStatus.received =>
-        next == OrderStatus.waitingMerchantApproval || next == OrderStatus.cancelled,
-      OrderStatus.waitingMerchantApproval =>
-        next == OrderStatus.acceptedByMerchant ||
-        next == OrderStatus.rejected ||
-        next == OrderStatus.cancelled,
-      OrderStatus.acceptedByMerchant =>
-        next == OrderStatus.preparing || next == OrderStatus.cancelled,
-      OrderStatus.preparing =>
-        next == OrderStatus.readyForPickup || next == OrderStatus.cancelled,
-      OrderStatus.readyForPickup => next == OrderStatus.pickedUpByRider,
-      OrderStatus.pickedUpByRider => next == OrderStatus.onTheWay,
-      OrderStatus.onTheWay => next == OrderStatus.delivered,
-      OrderStatus.delivered || OrderStatus.rejected || OrderStatus.cancelled => false,
-    };
+    switch (current) {
+      case OrderStatus.received:
+        return next == OrderStatus.waitingMerchantApproval || next == OrderStatus.cancelled;
+      case OrderStatus.waitingMerchantApproval:
+        return next == OrderStatus.acceptedByMerchant ||
+            next == OrderStatus.rejected ||
+            next == OrderStatus.cancelled;
+      case OrderStatus.acceptedByMerchant:
+        return next == OrderStatus.preparing || next == OrderStatus.cancelled;
+      case OrderStatus.preparing:
+        return next == OrderStatus.readyForPickup || next == OrderStatus.cancelled;
+      case OrderStatus.readyForPickup:
+        return next == OrderStatus.pickedUpByRider;
+      case OrderStatus.pickedUpByRider:
+        return next == OrderStatus.onTheWay;
+      case OrderStatus.onTheWay:
+        return next == OrderStatus.delivered;
+      case OrderStatus.delivered:
+      case OrderStatus.rejected:
+      case OrderStatus.cancelled:
+        return false;
+    }
   }
 }
