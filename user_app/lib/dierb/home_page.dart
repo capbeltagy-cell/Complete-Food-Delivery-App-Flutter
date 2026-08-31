@@ -131,7 +131,7 @@ class _Header extends StatelessWidget {
           ])),
           Container(
             decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(15), border: Border.all(color: AppConfig.borderColor)),
-            child: IconButton(onPressed: () {}, icon: const Icon(Icons.notifications_none_rounded, color: AppConfig.brandColor)),
+            child: const Icon(Icons.location_city_rounded, color: AppConfig.brandColor),
           ),
         ]),
       );

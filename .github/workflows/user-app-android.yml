@@ -20,6 +20,23 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  domain-tests:
+    name: Shared domain tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        shell: bash
+        working-directory: packages/dierb_core
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dart-lang/setup-dart@v1
+        with:
+          sdk: stable
+      - run: dart pub get
+      - run: dart analyze
+      - run: dart test
+
   customer:
     name: Customer APK and AAB
     runs-on: ubuntu-latest
@@ -58,6 +75,7 @@ jobs:
           fi
       - run: flutter pub get
       - run: flutter analyze --no-fatal-warnings --no-fatal-infos
+      - run: flutter test
       - run: flutter build apk --release
       - run: flutter build appbundle --release
       - name: Stage customer artifacts
@@ -115,6 +133,7 @@ jobs:
           fi
       - run: flutter pub get
       - run: flutter analyze --no-fatal-warnings --no-fatal-infos
+      - run: flutter test
       - run: flutter build apk --release
       - run: flutter build appbundle --release
       - name: Stage merchant artifacts
@@ -172,6 +191,7 @@ jobs:
           fi
       - run: flutter pub get
       - run: flutter analyze --no-fatal-warnings --no-fatal-infos
+      - run: flutter test
       - run: flutter build apk --release
       - run: flutter build appbundle --release
       - name: Stage rider artifacts
@@ -207,6 +227,7 @@ jobs:
           cache: true
       - run: flutter pub get
       - run: flutter analyze --no-fatal-warnings --no-fatal-infos
+      - run: flutter test
       - run: flutter build web --release
       - uses: actions/upload-artifact@v4
         with:

@@ -55,6 +55,11 @@ class _OrderCard extends StatelessWidget {
 
   Future<void> _setStatus(BuildContext context, OrderStatus status) async {
     try {
+      final fresh = await doc.reference.get();
+      final current = OrderStatusCodec.fromStorage(fresh.data()?['status']);
+      if (!OrderStatusCodec.canTransition(current, status)) {
+        throw StateError('حالة الطلب تغيرت بالفعل. حدّث الصفحة وحاول مرة أخرى.');
+      }
       await doc.reference.update(<String, dynamic>{
         'status': OrderStatusCodec.toStorage(status),
         'updatedAt': FieldValue.serverTimestamp(),

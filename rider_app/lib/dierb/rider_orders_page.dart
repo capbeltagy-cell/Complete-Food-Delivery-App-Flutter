@@ -255,6 +255,11 @@ class _RiderOrderCardState extends State<_RiderOrderCard> {
   Future<void> _changeStatus(OrderStatus next) async {
     setState(() => _busy = true);
     try {
+      final fresh = await widget.order.reference.get();
+      final current = OrderStatusCodec.fromStorage(fresh.data()?['status']);
+      if (!OrderStatusCodec.canTransition(current, next)) {
+        throw StateError('حالة الطلب تغيرت بالفعل. حدّث القائمة وحاول مرة أخرى.');
+      }
       final payload = <String, dynamic>{
         'status': next.name,
         'updatedAt': FieldValue.serverTimestamp(),

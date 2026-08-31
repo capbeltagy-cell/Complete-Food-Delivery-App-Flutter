@@ -37,4 +37,26 @@ abstract class OrderStatusCodec {
     final status = fromStorage(value);
     return status == OrderStatus.acceptedByMerchant || status == OrderStatus.preparing || status == OrderStatus.readyForPickup || status == OrderStatus.pickedUpByRider || status == OrderStatus.onTheWay;
   }
+
+  /// Single source of truth for the production order state machine.
+  /// Role-specific clients and backend rules must never skip these edges.
+  static bool canTransition(OrderStatus current, OrderStatus next) {
+    if (current.isTerminal || current == next) return false;
+    return switch (current) {
+      OrderStatus.received =>
+        next == OrderStatus.waitingMerchantApproval || next == OrderStatus.cancelled,
+      OrderStatus.waitingMerchantApproval =>
+        next == OrderStatus.acceptedByMerchant ||
+        next == OrderStatus.rejected ||
+        next == OrderStatus.cancelled,
+      OrderStatus.acceptedByMerchant =>
+        next == OrderStatus.preparing || next == OrderStatus.cancelled,
+      OrderStatus.preparing =>
+        next == OrderStatus.readyForPickup || next == OrderStatus.cancelled,
+      OrderStatus.readyForPickup => next == OrderStatus.pickedUpByRider,
+      OrderStatus.pickedUpByRider => next == OrderStatus.onTheWay,
+      OrderStatus.onTheWay => next == OrderStatus.delivered,
+      OrderStatus.delivered || OrderStatus.rejected || OrderStatus.cancelled => false,
+    };
+  }
 }
