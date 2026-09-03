@@ -127,7 +127,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   Future saveDataToFireStore(User currentUser) async {
-    FirebaseFirestore.instance.collection('riders').doc(currentUser.uid).set({
+    await FirebaseFirestore.instance.collection('riders').doc(currentUser.uid).set({
       "riderUID": currentUser.uid,
       "riderEmail": currentUser.email,
       "riderName": nameController.text.trim(),

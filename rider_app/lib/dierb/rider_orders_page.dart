@@ -227,6 +227,9 @@ class _RiderOrderCardState extends State<_RiderOrderCard> {
       if (status != 'approved' && status != 'Approved') {
         throw StateError('حساب المندوب غير معتمد بعد');
       }
+      if (rider['available'] != true) {
+        throw StateError('فعّل حالة متاح من الصفحة الرئيسية قبل استلام الطلب');
+      }
       final riderName = rider['riderName']?.toString() ?? user.displayName ?? 'مندوب ديرب';
       await FirebaseFirestore.instance.runTransaction((tx) async {
         final fresh = await tx.get(widget.order.reference);

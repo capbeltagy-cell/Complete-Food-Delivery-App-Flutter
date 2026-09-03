@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:rider_app/authentication/auth_screen.dart';
 import 'package:rider_app/dierb/rider_earnings_page.dart';
 import 'package:rider_app/dierb/rider_orders_page.dart';
+import 'package:rider_app/dierb/rider_profile_page.dart';
 import 'package:rider_app/global/global.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -172,7 +173,13 @@ class _HomeScreenState extends State<HomeScreen> {
                     Icons.assignment_rounded,
                     'طلبات متاحة',
                     'طلبات جاهزة للاستلام',
-                    () => _open(const RiderOrdersPage(mode: RiderOrdersMode.available)),
+                    () {
+                      if (available) {
+                        _open(const RiderOrdersPage(mode: RiderOrdersMode.available));
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('فعّل حالة متاح أولاً')));
+                      }
+                    },
                   ),
                   _Tile(
                     Icons.store_mall_directory_rounded,
@@ -197,6 +204,12 @@ class _HomeScreenState extends State<HomeScreen> {
                     'الأرباح',
                     'راجع مستحقاتك',
                     () => _open(const RiderEarningsPage()),
+                  ),
+                  _Tile(
+                    Icons.person_rounded,
+                    'حسابي',
+                    'بيانات الهاتف والعنوان',
+                    () => _open(const RiderProfilePage()),
                   ),
                 ],
               ),

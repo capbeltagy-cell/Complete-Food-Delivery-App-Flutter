@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../community/ask_dierb_page.dart';
 import '../marketplace/categories_page.dart';
 import '../marketplace/local_listings_page.dart';
+import '../marketplace/search_page.dart';
 import 'app_config.dart';
 
 class DierbHomePage extends StatelessWidget {
@@ -30,7 +31,7 @@ class DierbHomePage extends StatelessWidget {
                   ),
                   child: TextField(
                     readOnly: true,
-                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CategoriesPage())),
+                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SearchPage())),
                     decoration: InputDecoration(
                       hintText: 'بتدور على إيه في ديرب؟',
                       hintStyle: const TextStyle(color: AppConfig.textSecondary, fontWeight: FontWeight.w600),

@@ -237,6 +237,57 @@ class _CollectionPanel extends StatelessWidget {
   const _CollectionPanel({required this.section});
   final _Section section;
 
+  Future<void> _adminAction(BuildContext context, DocumentReference<Map<String, dynamic>> reference, Map<String, dynamic> changes, String success) async {
+    try {
+      await reference.update(<String, dynamic>{...changes, 'updatedAt': FieldValue.serverTimestamp()});
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(success)));
+    } on FirebaseException catch (error) {
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر تنفيذ الإجراء: ${error.code}')));
+    }
+  }
+
+  Widget? _managementMenu(BuildContext context, QueryDocumentSnapshot<Map<String, dynamic>> doc) {
+    final collection = section.collection;
+    if (collection == 'communityPosts') {
+      return PopupMenuButton<String>(
+        onSelected: (value) => _adminAction(context, doc.reference, {'status': value}, value == 'published' ? 'تم نشر المحتوى' : 'تم إخفاء المحتوى'),
+        itemBuilder: (_) => const [
+          PopupMenuItem(value: 'published', child: Text('نشر')),
+          PopupMenuItem(value: 'hidden', child: Text('إخفاء للمراجعة')),
+          PopupMenuItem(value: 'removed', child: Text('إزالة')),
+        ],
+      );
+    }
+    if (collection == 'reports') {
+      return PopupMenuButton<String>(
+        onSelected: (value) => _adminAction(context, doc.reference, {'status': value, 'resolvedBy': FirebaseAuth.instance.currentUser?.uid}, value == 'resolved' ? 'تم إغلاق البلاغ' : 'تم رفض البلاغ'),
+        itemBuilder: (_) => const [
+          PopupMenuItem(value: 'resolved', child: Text('تم الحل')),
+          PopupMenuItem(value: 'dismissed', child: Text('رفض البلاغ')),
+        ],
+      );
+    }
+    if (collection == 'categories') {
+      final active = doc.data()['active'] == true;
+      return IconButton(
+        tooltip: active ? 'إيقاف القسم' : 'تفعيل القسم',
+        onPressed: () => _adminAction(context, doc.reference, {'active': !active}, active ? 'تم إيقاف القسم' : 'تم تفعيل القسم'),
+        icon: Icon(active ? Icons.visibility_rounded : Icons.visibility_off_rounded),
+      );
+    }
+    if (const {'services', 'properties', 'jobs', 'offers', 'directoryEntries'}.contains(collection)) {
+      return PopupMenuButton<String>(
+        onSelected: (value) => _adminAction(context, doc.reference, {'status': value}, value == 'published' ? 'تم نشر العنصر' : 'تم إخفاء العنصر'),
+        itemBuilder: (_) => const [
+          PopupMenuItem(value: 'published', child: Text('نشر')),
+          PopupMenuItem(value: 'hidden', child: Text('إخفاء')),
+          PopupMenuItem(value: 'rejected', child: Text('رفض')),
+        ],
+      );
+    }
+    return null;
+  }
+
   Future<void> _setStatus(
     BuildContext context,
     QueryDocumentSnapshot<Map<String, dynamic>> doc,
@@ -418,7 +469,7 @@ class _CollectionPanel extends StatelessWidget {
                                     icon: const Icon(Icons.block_rounded, color: Colors.red),
                                   ),
                               ])
-                            : null,
+                            : _managementMenu(context, doc),
                       ),
                     );
                   },

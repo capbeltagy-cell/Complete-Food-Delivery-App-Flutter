@@ -128,18 +128,27 @@ class _CommunityComposerState extends State<CommunityComposer> {
   final body = TextEditingController();
   CommunityPostType type = CommunityPostType.question;
   bool saving = false;
+  String? error;
 
   Future<void> _save() async {
     if (title.text.trim().length < 5 || body.text.trim().length < 5) return;
     final user = FirebaseAuth.instance.currentUser!;
-    setState(() => saving = true);
-    final now = DateTime.now();
-    await widget.repository.publishPost(CommunityPost(
-      id: '', authorId: user.uid, authorName: user.displayName ?? 'مستخدم ديرب', authorType: CommunityAuthorType.user,
-      title: title.text.trim(), body: body.text.trim(), type: type, cityId: LaunchLocationDefaults.cityId,
-      createdAt: now, updatedAt: now,
-    ));
-    if (mounted) Navigator.pop(context, true);
+    setState(() { saving = true; error = null; });
+    try {
+      final now = DateTime.now();
+      await widget.repository.publishPost(CommunityPost(
+        id: '', authorId: user.uid, authorName: user.displayName ?? 'مستخدم ديرب', authorType: CommunityAuthorType.user,
+        title: title.text.trim(), body: body.text.trim(), type: type, cityId: LaunchLocationDefaults.cityId,
+        createdAt: now, updatedAt: now,
+      ));
+      if (mounted) Navigator.pop(context, true);
+    } on FirebaseException catch (exception) {
+      if (mounted) setState(() => error = firestoreErrorMessage(exception));
+    } catch (_) {
+      if (mounted) setState(() => error = 'تعذر نشر السؤال الآن. حاول مرة أخرى.');
+    } finally {
+      if (mounted) setState(() => saving = false);
+    }
   }
 
   @override
@@ -150,6 +159,7 @@ class _CommunityComposerState extends State<CommunityComposer> {
           DropdownButtonFormField<CommunityPostType>(initialValue: type, items: CommunityPostType.values.map((value) => DropdownMenuItem(value: value, child: Text(_postTypeLabel(value)))).toList(), onChanged: (value) => setState(() => type = value!)),
           const SizedBox(height: 12), TextField(controller: title, decoration: const InputDecoration(labelText: 'عنوان السؤال', border: OutlineInputBorder())),
           const SizedBox(height: 12), TextField(controller: body, minLines: 4, maxLines: 7, decoration: const InputDecoration(labelText: 'اكتب التفاصيل', border: OutlineInputBorder())),
+          if (error != null) Padding(padding: const EdgeInsets.only(top: 10), child: Text(error!, style: TextStyle(color: Theme.of(context).colorScheme.error))),
           const SizedBox(height: 16), FilledButton.icon(onPressed: saving ? null : _save, icon: saving ? const SizedBox.square(dimension: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.send_rounded), label: const Text('نشر السؤال')),
         ])),
       );

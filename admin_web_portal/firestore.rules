@@ -8,6 +8,10 @@ service cloud.firestore {
         && exists(/databases/$(database)/documents/riders/$(request.auth.uid))
         && get(/databases/$(database)/documents/riders/$(request.auth.uid)).data.status in ['approved', 'Approved'];
     }
+    function isAvailableApprovedRider() {
+      return isApprovedRider()
+        && get(/databases/$(database)/documents/riders/$(request.auth.uid)).data.available == true;
+    }
     function owns(field) { return signedIn() && resource.data[field] == request.auth.uid; }
     function createsOwn(field) { return signedIn() && request.resource.data[field] == request.auth.uid; }
     function only(fields) { return request.resource.data.diff(resource.data).changedKeys().hasOnly(fields); }
@@ -83,7 +87,7 @@ service cloud.firestore {
     match /riders/{id} {
       allow create: if signedIn() && request.auth.uid == id && request.resource.data.status == 'pending';
       allow read: if isAdmin() || (signedIn() && request.auth.uid == id);
-      allow update: if isAdmin() || (signedIn() && request.auth.uid == id && only(['available','availabilityUpdatedAt','lat','lng','address']));
+      allow update: if isAdmin() || (signedIn() && request.auth.uid == id && only(['available','availabilityUpdatedAt','lat','lng','address','phone','updatedAt']));
       allow delete: if isAdmin();
     }
     match /stores/{id} {
@@ -114,11 +118,11 @@ service cloud.firestore {
         || owns('orderedBy')
         || owns('sellerUID')
         || owns('riderUID')
-        || (isApprovedRider() && resource.data.riderUID == '' && resource.data.status == 'readyForPickup');
+        || (isAvailableApprovedRider() && resource.data.riderUID == '' && resource.data.status == 'readyForPickup');
       allow update: if isAdmin()
         || (owns('sellerUID') && merchantOrderTransition() && only(['status','updatedAt']))
         || (owns('riderUID') && isApprovedRider() && riderOrderTransition() && only(['status','lat','lng','address','pickedUpAt','onTheWayAt','deliveredAt','updatedAt']))
-        || (isApprovedRider()
+        || (isAvailableApprovedRider()
             && resource.data.riderUID == ''
             && resource.data.status == 'readyForPickup'
             && request.resource.data.riderUID == request.auth.uid
