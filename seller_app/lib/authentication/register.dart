@@ -25,8 +25,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
   XFile? _logo;
   XFile? _banner;
   bool _saving = false;
-  String _category = 'مطاعم';
-  static const _categories = ['مطاعم','سوبر ماركت','خضروات وفاكهة','لحوم ودواجن','صيدليات','أجهزة كهربائية','ملابس','خدمات','حلويات ومخبوزات','أخرى'];
+  String? _categoryId;
+  String? _categoryName;
 
   @override void dispose() { _name.dispose(); _storeName.dispose(); _email.dispose(); _password.dispose(); _phone.dispose(); _address.dispose(); _description.dispose(); super.dispose(); }
 
@@ -46,26 +46,40 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
-    if (_logo == null || _banner == null) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('اختار لوجو وبانر للمتجر'))); return; }
+    if (_categoryId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('اختار قسم المتجر')));
+      return;
+    }
     setState(() => _saving = true);
     User? user;
     try {
-      final logoUrl = await _upload(_logo!);
-      final bannerUrl = await _upload(_banner!);
       final credential = await FirebaseAuth.instance.createUserWithEmailAndPassword(email: _email.text.trim(), password: _password.text.trim());
       user = credential.user!;
+      await user.updateDisplayName(_name.text.trim());
+
+      // Images are deliberately optional. The merchant account must remain
+      // creatable while the external image service is unavailable.
+      String logoUrl = '';
+      String bannerUrl = '';
+      if (_logo != null) logoUrl = await _upload(_logo!);
+      if (_banner != null) bannerUrl = await _upload(_banner!);
       final now = FieldValue.serverTimestamp();
       final store = <String,dynamic>{
         'storeId': user.uid, 'ownerId': user.uid, 'name': _storeName.text.trim(), 'description': _description.text.trim(),
+        'logo': logoUrl, 'cover': bannerUrl,
         'logoUrl': logoUrl, 'imageUrl': logoUrl, 'bannerUrl': bannerUrl, 'coverUrl': bannerUrl,
-        'categoryId': _category, 'categoryName': _category, 'phone': _phone.text.trim(), 'address': _address.text.trim(),
-        'cityId': LaunchLocationDefaults.cityId, 'status': 'pending', 'verified': false, 'isOpen': true,
+        'categoryId': _categoryId, 'categoryName': _categoryName, 'phone': _phone.text.trim(), 'whatsapp': _phone.text.trim(), 'address': _address.text.trim(),
+        'cityId': LaunchLocationDefaults.cityId, 'areaId': '', 'villageId': '',
+        'latitude': 0, 'longitude': 0, 'openingHours': '',
+        'deliveryEnabled': true, 'pickupEnabled': true, 'deliveryZones': <String>[],
+        'minimumOrder': 0, 'deliveryFee': 0,
+        'status': 'pending', 'verified': false, 'featured': false, 'isOpen': false,
         'createdAt': now, 'updatedAt': now,
       };
       final batch = FirebaseFirestore.instance.batch();
-      batch.set(FirebaseFirestore.instance.collection('users').doc(user.uid), {'uid':user.uid,'name':_name.text.trim(),'email':_email.text.trim(),'phone':_phone.text.trim(),'role':'merchant','createdAt':now}, SetOptions(merge:true));
+      batch.set(FirebaseFirestore.instance.collection('users').doc(user.uid), {'uid':user.uid,'name':_name.text.trim(),'email':_email.text.trim(),'phone':_phone.text.trim(),'address':_address.text.trim(),'photoUrl':logoUrl,'status':'active','cityId':LaunchLocationDefaults.cityId,'createdAt':now,'updatedAt':now});
       batch.set(FirebaseFirestore.instance.collection('sellers').doc(user.uid), {'sellerUID':user.uid,'sellerEmail':_email.text.trim(),'sellerName':_name.text.trim(),'sellerAvtar':logoUrl,'phone':_phone.text.trim(),'address':_address.text.trim(),'status':'pending','cityId':LaunchLocationDefaults.cityId}, SetOptions(merge:true));
-      batch.set(FirebaseFirestore.instance.collection('merchantApplications').doc(user.uid), {'uid':user.uid,'ownerId':user.uid,'merchantName':_name.text.trim(),'storeName':_storeName.text.trim(),'categoryId':_category,'categoryName':_category,'logoUrl':logoUrl,'bannerUrl':bannerUrl,'phone':_phone.text.trim(),'address':_address.text.trim(),'status':'pending','createdAt':now,'updatedAt':now}, SetOptions(merge:true));
+      batch.set(FirebaseFirestore.instance.collection('merchantApplications').doc(user.uid), {'userId':user.uid,'ownerId':user.uid,'merchantName':_name.text.trim(),'name':_name.text.trim(),'storeName':_storeName.text.trim(),'categoryId':_categoryId,'categoryName':_categoryName,'logoUrl':logoUrl,'bannerUrl':bannerUrl,'phone':_phone.text.trim(),'address':_address.text.trim(),'cityId':LaunchLocationDefaults.cityId,'status':'pending','createdAt':now,'updatedAt':now});
       batch.set(FirebaseFirestore.instance.collection('stores').doc(user.uid), store, SetOptions(merge:true));
       await batch.commit();
       if (!mounted) return;
@@ -88,7 +102,35 @@ class _RegisterScreenState extends State<RegisterScreen> {
       const SizedBox(height:16),
       TextFormField(controller:_name, decoration:_dec('اسم صاحب المتجر',Icons.person_outline), validator:(v)=>v==null||v.trim().isEmpty?'مطلوب':null), const SizedBox(height:10),
       TextFormField(controller:_storeName, decoration:_dec('اسم المتجر',Icons.storefront_outlined), validator:(v)=>v==null||v.trim().isEmpty?'مطلوب':null), const SizedBox(height:10),
-      DropdownButtonFormField<String>(value:_category, decoration:_dec('قسم المتجر',Icons.grid_view_rounded), items:_categories.map((x)=>DropdownMenuItem(value:x,child:Text(x))).toList(), onChanged:(v){if(v!=null)setState(()=>_category=v);}), const SizedBox(height:10),
+      StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+        stream: FirebaseFirestore.instance.collection('categories').where('active', isEqualTo: true).orderBy('sortOrder').snapshots(),
+        builder: (context, snapshot) {
+          if (snapshot.hasError) {
+            return const Text('تعذر تحميل الأقسام. حاول مرة أخرى.', style: TextStyle(color: Colors.red));
+          }
+          if (!snapshot.hasData) return const LinearProgressIndicator();
+          final categories = snapshot.data!.docs;
+          return DropdownButtonFormField<String>(
+            value: categories.any((doc) => doc.id == _categoryId) ? _categoryId : null,
+            decoration: _dec('قسم المتجر', Icons.grid_view_rounded),
+            items: categories.map((doc) => DropdownMenuItem(value: doc.id, child: Text((doc.data()['nameAr'] ?? doc.id).toString()))).toList(),
+            onChanged: (value) {
+              QueryDocumentSnapshot<Map<String, dynamic>>? selected;
+              for (final doc in categories) {
+                if (doc.id == value) {
+                  selected = doc;
+                  break;
+                }
+              }
+              setState(() {
+                _categoryId = value;
+                _categoryName = selected?.data()['nameAr']?.toString();
+              });
+            },
+            validator: (value) => value == null ? 'اختار قسم المتجر' : null,
+          );
+        },
+      ), const SizedBox(height:10),
       TextFormField(controller:_description, maxLines:3, decoration:_dec('نبذة عن المتجر',Icons.notes_rounded)), const SizedBox(height:10),
       TextFormField(controller:_phone, keyboardType:TextInputType.phone, decoration:_dec('رقم الهاتف / واتساب',Icons.phone_outlined), validator:(v)=>v==null||v.trim().isEmpty?'مطلوب':null), const SizedBox(height:10),
       TextFormField(controller:_address, decoration:_dec('العنوان',Icons.location_on_outlined), validator:(v)=>v==null||v.trim().isEmpty?'مطلوب':null), const SizedBox(height:10),

@@ -358,7 +358,23 @@ class _ProductEditorState extends State<_ProductEditor> {
         Row(children: [
           Expanded(child: TextField(controller: stock, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'المخزون', border: OutlineInputBorder()))),
           const SizedBox(width: 10),
-          Expanded(child: TextField(controller: categoryId, decoration: const InputDecoration(labelText: 'كود القسم', border: OutlineInputBorder()))),
+          Expanded(
+            child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+              stream: FirebaseFirestore.instance.collection('categories').where('active', isEqualTo: true).orderBy('sortOrder').snapshots(),
+              builder: (context, snapshot) {
+                if (!snapshot.hasData) return const LinearProgressIndicator();
+                final categories = snapshot.data!.docs;
+                final current = categories.any((doc) => doc.id == categoryId.text) ? categoryId.text : null;
+                return DropdownButtonFormField<String>(
+                  value: current,
+                  isExpanded: true,
+                  decoration: const InputDecoration(labelText: 'القسم', border: OutlineInputBorder()),
+                  items: categories.map((doc) => DropdownMenuItem(value: doc.id, child: Text((doc.data()['nameAr'] ?? doc.id).toString(), overflow: TextOverflow.ellipsis))).toList(),
+                  onChanged: (value) => setState(() => categoryId.text = value ?? ''),
+                );
+              },
+            ),
+          ),
         ]),
         SwitchListTile(value: available, onChanged: (v) => setState(() => available = v), title: const Text('المنتج متاح للعملاء')),
         const SizedBox(height: 12),
