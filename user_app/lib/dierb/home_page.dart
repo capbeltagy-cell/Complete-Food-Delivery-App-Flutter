@@ -1,13 +1,13 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:dierb_core/dierb_core.dart';
 import 'package:flutter/material.dart';
+import '../community/ask_dierb_page.dart';
+import '../marketplace/categories_page.dart';
+import '../marketplace/local_listings_page.dart';
 import 'app_config.dart';
 
 class DierbHomePage extends StatelessWidget {
   const DierbHomePage({super.key});
-
-  static final categories = LaunchCategoryDefaults.values
-      .where((category) => category.featured && category.active)
-      .toList(growable: false);
 
   @override
   Widget build(BuildContext context) {
@@ -29,6 +29,8 @@ class DierbHomePage extends StatelessWidget {
                     boxShadow: const [BoxShadow(color: Color(0x0D172033), blurRadius: 20, offset: Offset(0, 8))],
                   ),
                   child: TextField(
+                    readOnly: true,
+                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CategoriesPage())),
                     decoration: InputDecoration(
                       hintText: 'بتدور على إيه في ديرب؟',
                       hintStyle: const TextStyle(color: AppConfig.textSecondary, fontWeight: FontWeight.w600),
@@ -46,38 +48,14 @@ class DierbHomePage extends StatelessWidget {
               ),
             ),
             const SliverToBoxAdapter(child: _OfferBanner()),
-            SliverToBoxAdapter(child: _SectionTitle(title: 'كل احتياجاتك', action: 'عرض الكل')),
-            SliverPadding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              sliver: SliverGrid.builder(
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 4, mainAxisExtent: 108, crossAxisSpacing: 10, mainAxisSpacing: 10),
-                itemCount: categories.length,
-                itemBuilder: (context, index) {
-                  final category = categories[index];
-                  return Column(children: [
-                    Container(
-                      width: 64,
-                      height: 64,
-                      decoration: BoxDecoration(
-                        color: _categoryColor(index),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: Colors.white, width: 2),
-                        boxShadow: const [BoxShadow(color: Color(0x10172033), blurRadius: 12, offset: Offset(0, 5))],
-                      ),
-                      child: Icon(_categoryIcon(category.icon), color: AppConfig.brandColor, size: 28),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(category.nameAr, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, color: AppConfig.textPrimary, fontWeight: FontWeight.w800)),
-                  ]);
-                },
-              ),
-            ),
-            SliverToBoxAdapter(child: _SectionTitle(title: 'عروض النهارده', action: 'المزيد')),
-            const SliverToBoxAdapter(child: _HorizontalCards()),
-            SliverToBoxAdapter(child: _SectionTitle(title: 'اسأل أهل ديرب', action: 'كل الأسئلة')),
-            const SliverToBoxAdapter(child: _CommunityCard()),
-            SliverToBoxAdapter(child: _SectionTitle(title: 'محلات قريبة منك', action: 'عرض الكل')),
-            const SliverToBoxAdapter(child: _StoreCard()),
+            SliverToBoxAdapter(child: _SectionTitle(title: 'كل احتياجاتك', action: 'عرض الكل', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CategoriesPage())))),
+            const SliverToBoxAdapter(child: _HomeCategories()),
+            SliverToBoxAdapter(child: _SectionTitle(title: 'اكتشف ديرب', action: 'كل الأقسام', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CategoriesPage())))),
+            SliverToBoxAdapter(child: _HorizontalCards(onOpen: (category) => Navigator.push(context, MaterialPageRoute(builder: (_) => LocalListingsPage(category: category))))),
+            SliverToBoxAdapter(child: _SectionTitle(title: 'اسأل أهل ديرب', action: 'كل الأسئلة', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AskDierbPage())))),
+            SliverToBoxAdapter(child: _CommunityCard(onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AskDierbPage())))),
+            SliverToBoxAdapter(child: _SectionTitle(title: 'المتاجر والمنتجات', action: 'عرض الكل', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CategoriesPage())))),
+            SliverToBoxAdapter(child: _StoreCard(onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CategoriesPage())))),
             const SliverToBoxAdapter(child: SizedBox(height: 28)),
           ],
         ),
@@ -106,6 +84,52 @@ class DierbHomePage extends StatelessWidget {
     };
     return icons[icon] ?? Icons.category_rounded;
   }
+}
+
+class _HomeCategories extends StatelessWidget {
+  const _HomeCategories();
+  @override
+  Widget build(BuildContext context) => StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+        stream: FirebaseFirestore.instance.collection('categories').where('active', isEqualTo: true).orderBy('sortOrder').limit(8).snapshots(),
+        builder: (context, snapshot) {
+          if (!snapshot.hasData || snapshot.hasError) {
+            return SizedBox(
+              height: 92,
+              child: Center(child: snapshot.hasError ? const Text('تعذر تحميل الأقسام') : const CircularProgressIndicator()),
+            );
+          }
+          final categories = snapshot.data!.docs.map((doc) => Category.fromMap(doc.id, doc.data())).toList(growable: false);
+          if (categories.isEmpty) return const SizedBox(height: 92, child: Center(child: Text('لا توجد أقسام منشورة حاليًا')));
+          return GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 4, mainAxisExtent: 108, crossAxisSpacing: 10, mainAxisSpacing: 10),
+            itemCount: categories.length,
+            itemBuilder: (context, index) {
+              final category = categories[index];
+              return InkWell(
+                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => LocalListingsPage(category: category))),
+                borderRadius: BorderRadius.circular(18),
+                child: Column(children: [
+                  Container(
+                    width: 64,
+                    height: 64,
+                    decoration: BoxDecoration(
+                      color: DierbHomePage._categoryColor(index),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: Colors.white, width: 2),
+                    ),
+                    child: Icon(DierbHomePage._categoryIcon(category.icon), color: AppConfig.brandColor, size: 28),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(category.nameAr, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, color: AppConfig.textPrimary, fontWeight: FontWeight.w800)),
+                ]),
+              );
+            },
+          );
+        },
+      );
 }
 
 class _Header extends StatelessWidget {
@@ -178,40 +202,46 @@ class _PremiumPill extends StatelessWidget {
 }
 
 class _SectionTitle extends StatelessWidget {
-  const _SectionTitle({required this.title, required this.action});
+  const _SectionTitle({required this.title, required this.action, required this.onTap});
   final String title;
   final String action;
+  final VoidCallback onTap;
   @override
   Widget build(BuildContext context) => Padding(
         padding: const EdgeInsets.fromLTRB(16, 25, 16, 12),
         child: Row(children: [
           Expanded(child: Text(title, style: const TextStyle(fontSize: 19, color: AppConfig.textPrimary, fontWeight: FontWeight.w900))),
-          Text(action, style: const TextStyle(color: AppConfig.brandColor, fontWeight: FontWeight.w800)),
+          TextButton(onPressed: onTap, child: Text(action, style: const TextStyle(color: AppConfig.brandColor, fontWeight: FontWeight.w800))),
         ]),
       );
 }
 
 class _HorizontalCards extends StatelessWidget {
-  const _HorizontalCards();
+  const _HorizontalCards({required this.onOpen});
+  final ValueChanged<Category> onOpen;
   @override
   Widget build(BuildContext context) => SizedBox(
         height: 150,
-        child: ListView(padding: const EdgeInsets.symmetric(horizontal: 16), scrollDirection: Axis.horizontal, children: const [
-          _MiniCard(title: 'عروض البيت', subtitle: 'خصومات يومية من محلات ديرب', icon: Icons.local_offer_rounded, color: Color(0xFFF7EFE4)),
-          _MiniCard(title: 'توصيل أسرع', subtitle: 'متاجر قريبة ومفتوحة الآن', icon: Icons.delivery_dining_rounded, color: Color(0xFFEAF4F0)),
-          _MiniCard(title: 'خدمات موثوقة', subtitle: 'أهل خبرة قريبين منك', icon: Icons.verified_rounded, color: Color(0xFFEAF1F8)),
+        child: ListView(padding: const EdgeInsets.symmetric(horizontal: 16), scrollDirection: Axis.horizontal, children: [
+          _MiniCard(title: 'العروض المنشورة', subtitle: 'شاهد العروض المتاحة حاليًا', icon: Icons.local_offer_rounded, color: const Color(0xFFF7EFE4), onTap: () => onOpen(_categoryOf(CategoryType.offer))),
+          _MiniCard(title: 'الخدمات المحلية', subtitle: 'تواصل مع مقدمي الخدمات', icon: Icons.handyman_rounded, color: const Color(0xFFEAF4F0), onTap: () => onOpen(_categoryOf(CategoryType.service))),
+          _MiniCard(title: 'عقارات محلية', subtitle: 'إعلانات منشورة داخل مدينتك', icon: Icons.apartment_rounded, color: const Color(0xFFEAF1F8), onTap: () => onOpen(_categoryOf(CategoryType.property))),
+          _MiniCard(title: 'وظائف محلية', subtitle: 'فرص العمل المنشورة', icon: Icons.work_rounded, color: const Color(0xFFF0ECF7), onTap: () => onOpen(_categoryOf(CategoryType.job))),
         ]),
       );
+
+  Category _categoryOf(CategoryType type) => LaunchCategoryDefaults.values.firstWhere((item) => item.type == type);
 }
 
 class _MiniCard extends StatelessWidget {
-  const _MiniCard({required this.title, required this.subtitle, required this.icon, required this.color});
+  const _MiniCard({required this.title, required this.subtitle, required this.icon, required this.color, required this.onTap});
   final String title;
   final String subtitle;
   final IconData icon;
   final Color color;
+  final VoidCallback onTap;
   @override
-  Widget build(BuildContext context) => Container(
+  Widget build(BuildContext context) => InkWell(onTap: onTap, borderRadius: BorderRadius.circular(22), child: Container(
         width: 220,
         margin: const EdgeInsetsDirectional.only(end: 12),
         padding: const EdgeInsets.all(17),
@@ -223,38 +253,38 @@ class _MiniCard extends StatelessWidget {
           const SizedBox(height: 4),
           Text(subtitle, style: const TextStyle(color: AppConfig.textSecondary, fontSize: 12, fontWeight: FontWeight.w600)),
         ]),
-      );
+      ));
 }
 
 class _CommunityCard extends StatelessWidget {
-  const _CommunityCard();
+  const _CommunityCard({required this.onTap});
+  final VoidCallback onTap;
   @override
-  Widget build(BuildContext context) => Container(
+  Widget build(BuildContext context) => InkWell(onTap: onTap, borderRadius: BorderRadius.circular(22), child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 16),
         padding: const EdgeInsets.all(17),
         decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(22), border: Border.all(color: AppConfig.borderColor), boxShadow: const [BoxShadow(color: Color(0x0B172033), blurRadius: 18, offset: Offset(0, 8))]),
         child: const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Row(children: [CircleAvatar(backgroundColor: AppConfig.brandColorSoft, child: Icon(Icons.person_rounded, color: AppConfig.brandColor)), SizedBox(width: 10), Expanded(child: Text('من أهل ديرب', style: TextStyle(color: AppConfig.textPrimary, fontWeight: FontWeight.w900))), Icon(Icons.verified_rounded, color: AppConfig.brandColor, size: 19)]),
+          Row(children: [CircleAvatar(backgroundColor: AppConfig.brandColorSoft, child: Icon(Icons.forum_rounded, color: AppConfig.brandColor)), SizedBox(width: 10), Expanded(child: Text('مجتمع أهل ديرب', style: TextStyle(color: AppConfig.textPrimary, fontWeight: FontWeight.w900))), Icon(Icons.arrow_back_ios_new_rounded, color: AppConfig.brandColor, size: 17)]),
           SizedBox(height: 14),
-          Text('محتاج كهربائي شاطر يكون متاح النهارده، مين يرشح حد؟', style: TextStyle(fontSize: 16, color: AppConfig.textPrimary, height: 1.55, fontWeight: FontWeight.w700)),
-          SizedBox(height: 14),
-          Row(children: [Icon(Icons.thumb_up_alt_outlined, size: 19, color: AppConfig.textSecondary), SizedBox(width: 5), Text('12 مفيد', style: TextStyle(color: AppConfig.textSecondary)), SizedBox(width: 20), Icon(Icons.chat_bubble_outline_rounded, size: 19, color: AppConfig.textSecondary), SizedBox(width: 5), Text('8 ردود', style: TextStyle(color: AppConfig.textSecondary))]),
+          Text('اقرأ الأسئلة المنشورة، اطلب منتجًا أو خدمة، وشارك أهل بلدك بتجربتك.', style: TextStyle(fontSize: 15, color: AppConfig.textPrimary, height: 1.55, fontWeight: FontWeight.w700)),
         ]),
-      );
+      ));
 }
 
 class _StoreCard extends StatelessWidget {
-  const _StoreCard();
+  const _StoreCard({required this.onTap});
+  final VoidCallback onTap;
   @override
-  Widget build(BuildContext context) => Container(
+  Widget build(BuildContext context) => InkWell(onTap: onTap, borderRadius: BorderRadius.circular(22), child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 16),
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(22), border: Border.all(color: AppConfig.borderColor), boxShadow: const [BoxShadow(color: Color(0x0B172033), blurRadius: 18, offset: Offset(0, 8))]),
         child: const Row(children: [
           CircleAvatar(radius: 31, backgroundColor: AppConfig.brandColorSoft, child: Icon(Icons.store_rounded, color: AppConfig.brandColor, size: 30)),
           SizedBox(width: 12),
-          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('متاجر ديرب المميزة', style: TextStyle(color: AppConfig.textPrimary, fontWeight: FontWeight.w900, fontSize: 16)), SizedBox(height: 5), Text('قريب منك • مفتوح الآن', style: TextStyle(color: AppConfig.textSecondary, fontWeight: FontWeight.w600)), SizedBox(height: 5), Row(children: [Icon(Icons.star_rounded, color: AppConfig.accentColor, size: 18), Text(' 4.8', style: TextStyle(fontWeight: FontWeight.w800))])])),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('تصفح المتاجر المعتمدة', style: TextStyle(color: AppConfig.textPrimary, fontWeight: FontWeight.w900, fontSize: 16)), SizedBox(height: 5), Text('اختر القسم وشاهد المتاجر والمنتجات الحقيقية المتاحة', style: TextStyle(color: AppConfig.textSecondary, fontWeight: FontWeight.w600))])),
           Icon(Icons.arrow_back_ios_new_rounded, color: AppConfig.brandColor, size: 18),
         ]),
-      );
+      ));
 }

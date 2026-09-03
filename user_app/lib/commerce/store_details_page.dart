@@ -145,7 +145,7 @@ class StoreDetailsPage extends StatelessWidget {
                   Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     Row(children: [
                       Expanded(child: Text(parsed.name, style: const TextStyle(fontSize: 23, fontWeight: FontWeight.w900, color: AppConfig.textPrimary))),
-                      const Icon(Icons.verified_rounded, color: AppConfig.brandColor, size: 21),
+                      if (parsed.verified) const Icon(Icons.verified_rounded, color: AppConfig.brandColor, size: 21),
                     ]),
                     const SizedBox(height: 5),
                     if (category.isNotEmpty) Text(category, style: const TextStyle(color: AppConfig.textSecondary, fontWeight: FontWeight.w700)),

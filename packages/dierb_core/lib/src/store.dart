@@ -20,6 +20,7 @@ class Store {
     required this.id, required this.ownerId, required this.name, required this.categoryId, required this.cityId,
     this.description = '', this.logo, this.cover, this.areaId, this.villageId, this.address = '',
     this.latitude, this.longitude, this.phone = '', this.whatsapp = '', this.openingHours = const <OpeningHours>[],
+    this.openingHoursLabel = '',
     this.isOpen = false, this.deliveryEnabled = true, this.pickupEnabled = true,
     this.deliveryZoneIds = const <String>[], this.minimumOrder = 0, this.deliveryFee = 0,
     this.rating = 0, this.reviewCount = 0, this.verified = false, this.featured = false,
@@ -29,6 +30,7 @@ class Store {
   final String? logo, cover, areaId, villageId;
   final double? latitude, longitude;
   final List<OpeningHours> openingHours;
+  final String openingHoursLabel;
   final bool isOpen, deliveryEnabled, pickupEnabled, verified, featured;
   final List<String> deliveryZoneIds;
   final double minimumOrder, deliveryFee, rating;
@@ -38,7 +40,7 @@ class Store {
   bool get publiclyDiscoverable => status == MerchantStatus.approved;
   String get displayHours {
     final active = openingHours.where((hours) => !hours.closed).toList();
-    if (active.isEmpty) return '';
+    if (active.isEmpty) return openingHoursLabel;
     final first = active.first;
     return '${first.open} - ${first.close}';
   }
@@ -62,7 +64,8 @@ class Store {
         address: map['address']?.toString() ?? '', latitude: (map['latitude'] as num?)?.toDouble(),
         longitude: (map['longitude'] as num?)?.toDouble(), phone: map['phone']?.toString() ?? '',
         whatsapp: map['whatsapp']?.toString() ?? '',
-        openingHours: (map['openingHours'] as List? ?? const <dynamic>[]).whereType<Map>().map((v) => OpeningHours.fromMap(Map<String, dynamic>.from(v))).toList(),
+        openingHours: (map['openingHours'] is List ? map['openingHours'] as List : const <dynamic>[]).whereType<Map>().map((v) => OpeningHours.fromMap(Map<String, dynamic>.from(v))).toList(),
+        openingHoursLabel: map['openingHours'] is String ? map['openingHours'].toString() : '',
         isOpen: map['isOpen'] == true, deliveryEnabled: map['deliveryEnabled'] != false, pickupEnabled: map['pickupEnabled'] != false,
         deliveryZoneIds: List<String>.from(map['deliveryZones'] as List? ?? const <String>[]),
         minimumOrder: (map['minimumOrder'] as num?)?.toDouble() ?? 0, deliveryFee: (map['deliveryFee'] as num?)?.toDouble() ?? 0,
@@ -75,7 +78,10 @@ class Store {
         if (cover != null) 'cover': cover, 'categoryId': categoryId, 'cityId': cityId,
         if (areaId != null) 'areaId': areaId, if (villageId != null) 'villageId': villageId,
         'address': address, if (latitude != null) 'latitude': latitude, if (longitude != null) 'longitude': longitude,
-        'phone': phone, 'whatsapp': whatsapp, 'openingHours': openingHours.map((value) => value.toMap()).toList(),
+        'phone': phone, 'whatsapp': whatsapp,
+        'openingHours': openingHours.isEmpty && openingHoursLabel.isNotEmpty
+            ? openingHoursLabel
+            : openingHours.map((value) => value.toMap()).toList(),
         'isOpen': isOpen, 'deliveryEnabled': deliveryEnabled, 'pickupEnabled': pickupEnabled,
         'deliveryZones': deliveryZoneIds, 'minimumOrder': minimumOrder, 'deliveryFee': deliveryFee,
         'rating': rating, 'reviewCount': reviewCount, 'verified': verified, 'featured': featured, 'status': status.name,
