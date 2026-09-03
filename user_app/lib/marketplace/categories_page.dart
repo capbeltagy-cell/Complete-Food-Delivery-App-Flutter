@@ -14,8 +14,8 @@ class CategoriesPage extends StatelessWidget {
         builder: (context, snapshot) {
           if (snapshot.hasError) return const _CategoryState(icon: Icons.cloud_off_rounded, message: 'تعذر تحميل الأقسام الآن');
           if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
-          final categories = snapshot.data!.docs.map((doc) => Category.fromMap(doc.id, doc.data())).toList(growable: false);
-          if (categories.isEmpty) return const _CategoryState(icon: Icons.category_outlined, message: 'لا توجد أقسام منشورة حاليًا');
+          final remote = snapshot.data!.docs.map((doc) => Category.fromMap(doc.id, doc.data())).toList(growable: false);
+          final categories = remote.isEmpty ? LaunchCategoryDefaults.values.where((item) => item.active).toList(growable: false) : remote;
           return GridView.builder(
             padding: const EdgeInsets.all(14),
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, childAspectRatio: 1.35, crossAxisSpacing: 11, mainAxisSpacing: 11),

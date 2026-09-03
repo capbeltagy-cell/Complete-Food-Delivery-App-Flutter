@@ -99,8 +99,8 @@ class _HomeCategories extends StatelessWidget {
               child: Center(child: snapshot.hasError ? const Text('تعذر تحميل الأقسام') : const CircularProgressIndicator()),
             );
           }
-          final categories = snapshot.data!.docs.map((doc) => Category.fromMap(doc.id, doc.data())).toList(growable: false);
-          if (categories.isEmpty) return const SizedBox(height: 92, child: Center(child: Text('لا توجد أقسام منشورة حاليًا')));
+          final remote = snapshot.data!.docs.map((doc) => Category.fromMap(doc.id, doc.data())).toList(growable: false);
+          final categories = remote.isEmpty ? LaunchCategoryDefaults.values.where((item) => item.active && item.featured).take(8).toList(growable: false) : remote;
           return GridView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),

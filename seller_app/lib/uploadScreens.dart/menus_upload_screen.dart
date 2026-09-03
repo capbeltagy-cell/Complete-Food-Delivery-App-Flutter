@@ -2,6 +2,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:dierb_core/dierb_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
@@ -363,13 +364,16 @@ class _ProductEditorState extends State<_ProductEditor> {
               stream: FirebaseFirestore.instance.collection('categories').where('active', isEqualTo: true).orderBy('sortOrder').snapshots(),
               builder: (context, snapshot) {
                 if (!snapshot.hasData) return const LinearProgressIndicator();
-                final categories = snapshot.data!.docs;
-                final current = categories.any((doc) => doc.id == categoryId.text) ? categoryId.text : null;
+                final documents = snapshot.data!.docs;
+                final categories = documents.isEmpty
+                    ? LaunchCategoryDefaults.values.where((item) => item.active).toList(growable: false)
+                    : documents.map((doc) => Category.fromMap(doc.id, doc.data())).toList(growable: false);
+                final current = categories.any((category) => category.id == categoryId.text) ? categoryId.text : null;
                 return DropdownButtonFormField<String>(
                   value: current,
                   isExpanded: true,
                   decoration: const InputDecoration(labelText: 'القسم', border: OutlineInputBorder()),
-                  items: categories.map((doc) => DropdownMenuItem(value: doc.id, child: Text((doc.data()['nameAr'] ?? doc.id).toString(), overflow: TextOverflow.ellipsis))).toList(),
+                  items: categories.map((category) => DropdownMenuItem(value: category.id, child: Text(category.nameAr, overflow: TextOverflow.ellipsis))).toList(),
                   onChanged: (value) => setState(() => categoryId.text = value ?? ''),
                 );
               },

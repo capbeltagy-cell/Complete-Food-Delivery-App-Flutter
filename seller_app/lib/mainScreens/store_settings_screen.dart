@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:dierb_core/dierb_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -232,22 +233,22 @@ class _StoreSettingsScreenState extends State<StoreSettingsScreen> {
                 StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
                   stream: FirebaseFirestore.instance.collection('categories').where('active', isEqualTo: true).snapshots(),
                   builder: (context, snapshot) {
-                    final docs = snapshot.data?.docs ?? const [];
-                    final items = <DropdownMenuItem<String>>[
-                      const DropdownMenuItem(value: 'general', child: Text('عام')),
-                      ...docs.map((d) => DropdownMenuItem(value: d.id, child: Text((d.data()['name'] ?? d.data()['nameAr'] ?? d.id).toString()))),
-                    ];
-                    final validValue = items.any((e) => e.value == categoryId) ? categoryId : 'general';
+                    final docs = snapshot.data?.docs ?? const <QueryDocumentSnapshot<Map<String, dynamic>>>[];
+                    final categories = docs.isEmpty
+                        ? LaunchCategoryDefaults.values.where((item) => item.active).toList(growable: false)
+                        : docs.map((doc) => Category.fromMap(doc.id, doc.data())).toList(growable: false);
+                    final items = categories.map((item) => DropdownMenuItem(value: item.id, child: Text(item.nameAr))).toList();
+                    final validValue = categories.any((item) => item.id == categoryId) ? categoryId : null;
                     return DropdownButtonFormField<String>(
                       value: validValue,
                       decoration: const InputDecoration(labelText: 'قسم المتجر'),
                       items: items,
                       onChanged: (value) {
                         if (value == null) return;
-                        final selected = docs.where((d) => d.id == value).toList();
+                        final selected = categories.where((item) => item.id == value).toList();
                         setState(() {
                           categoryId = value;
-                          categoryName = selected.isEmpty ? 'عام' : (selected.first.data()['name'] ?? selected.first.data()['nameAr'] ?? value).toString();
+                          categoryName = selected.isEmpty ? value : selected.first.nameAr;
                         });
                       },
                     );

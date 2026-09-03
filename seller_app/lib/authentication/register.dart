@@ -109,22 +109,25 @@ class _RegisterScreenState extends State<RegisterScreen> {
             return const Text('تعذر تحميل الأقسام. حاول مرة أخرى.', style: TextStyle(color: Colors.red));
           }
           if (!snapshot.hasData) return const LinearProgressIndicator();
-          final categories = snapshot.data!.docs;
+          final documents = snapshot.data!.docs;
+          final categories = documents.isEmpty
+              ? LaunchCategoryDefaults.values.where((item) => item.active).toList(growable: false)
+              : documents.map((doc) => Category.fromMap(doc.id, doc.data())).toList(growable: false);
           return DropdownButtonFormField<String>(
-            value: categories.any((doc) => doc.id == _categoryId) ? _categoryId : null,
+            value: categories.any((category) => category.id == _categoryId) ? _categoryId : null,
             decoration: _dec('قسم المتجر', Icons.grid_view_rounded),
-            items: categories.map((doc) => DropdownMenuItem(value: doc.id, child: Text((doc.data()['nameAr'] ?? doc.id).toString()))).toList(),
+            items: categories.map((category) => DropdownMenuItem(value: category.id, child: Text(category.nameAr))).toList(),
             onChanged: (value) {
-              QueryDocumentSnapshot<Map<String, dynamic>>? selected;
-              for (final doc in categories) {
-                if (doc.id == value) {
-                  selected = doc;
+              Category? selected;
+              for (final category in categories) {
+                if (category.id == value) {
+                  selected = category;
                   break;
                 }
               }
               setState(() {
                 _categoryId = value;
-                _categoryName = selected?.data()['nameAr']?.toString();
+                _categoryName = selected?.nameAr;
               });
             },
             validator: (value) => value == null ? 'اختار قسم المتجر' : null,
