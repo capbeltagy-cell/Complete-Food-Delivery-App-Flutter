@@ -64,6 +64,7 @@ class _AdminStartupError extends StatelessWidget {
           ),
         ),
       );
+}
 
 class _AdminGate extends StatelessWidget {
   const _AdminGate();
