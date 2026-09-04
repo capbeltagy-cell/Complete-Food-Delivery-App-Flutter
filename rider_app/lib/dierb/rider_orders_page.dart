@@ -268,7 +268,17 @@ class _RiderOrderCardState extends State<_RiderOrderCard> {
         'updatedAt': FieldValue.serverTimestamp(),
       };
       if (next == OrderStatus.onTheWay) payload['onTheWayAt'] = FieldValue.serverTimestamp();
-      if (next == OrderStatus.delivered) payload['deliveredAt'] = FieldValue.serverTimestamp();
+      if (next == OrderStatus.delivered) {
+        payload['deliveredAt'] = FieldValue.serverTimestamp();
+        if (fresh.data()?['paymentMethod'] == 'cashOnDelivery') {
+          payload.addAll(<String, dynamic>{
+            'cashCollected': true,
+            'collectedBy': FirebaseAuth.instance.currentUser!.uid,
+            'collectedAt': FieldValue.serverTimestamp(),
+            'paymentStatus': 'cashCollected',
+          });
+        }
+      }
       await widget.order.reference.update(payload);
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(next.labelAr)));
     } catch (error) {

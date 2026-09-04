@@ -185,6 +185,8 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
         'addressText': widget.address.text.trim(),
         'notes': widget.notes.text.trim(),
         'paymentMethod': 'cashOnDelivery',
+        'paymentStatus': 'awaitingCashCollection',
+        'cashCollected': false,
         'storeId': widget.cart.storeId,
         'storeName': widget.cart.storeName,
         'sellerUID': widget.ownerId,

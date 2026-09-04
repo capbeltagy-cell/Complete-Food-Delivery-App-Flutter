@@ -112,6 +112,9 @@ service cloud.firestore {
       allow create: if createsOwn('orderedBy')
         && request.resource.data.status in ['received','waitingMerchantApproval']
         && request.resource.data.riderUID == ''
+        && request.resource.data.paymentMethod == 'cashOnDelivery'
+        && request.resource.data.paymentStatus == 'awaitingCashCollection'
+        && request.resource.data.cashCollected == false
         && validOrderStore()
         && validOrderFinancials();
       allow read: if isAdmin()
@@ -121,7 +124,13 @@ service cloud.firestore {
         || (isAvailableApprovedRider() && resource.data.riderUID == '' && resource.data.status == 'readyForPickup');
       allow update: if isAdmin()
         || (owns('sellerUID') && merchantOrderTransition() && only(['status','updatedAt']))
-        || (owns('riderUID') && isApprovedRider() && riderOrderTransition() && only(['status','lat','lng','address','pickedUpAt','onTheWayAt','deliveredAt','updatedAt']))
+        || (owns('riderUID') && isApprovedRider() && riderOrderTransition()
+            && only(['status','lat','lng','address','pickedUpAt','onTheWayAt','deliveredAt','cashCollected','collectedBy','collectedAt','paymentStatus','updatedAt'])
+            && (request.resource.data.status != 'delivered'
+                || resource.data.paymentMethod != 'cashOnDelivery'
+                || (request.resource.data.cashCollected == true
+                    && request.resource.data.collectedBy == request.auth.uid
+                    && request.resource.data.paymentStatus == 'cashCollected')))
         || (isAvailableApprovedRider()
             && resource.data.riderUID == ''
             && resource.data.status == 'readyForPickup'
@@ -178,6 +187,20 @@ service cloud.firestore {
     }
     match /appSettings/{id} { allow read: if true; allow write: if isAdmin(); }
     match /subscriptions/{id} { allow read: if isAdmin() || owns('userId'); allow write: if isAdmin(); }
+    match /payments/{id} {
+      allow read: if isAdmin() || owns('userId') || owns('merchantId');
+      allow create, update, delete: if isAdmin();
+    }
+    match /merchantSubscriptions/{id} {
+      allow read: if isAdmin() || owns('merchantId');
+      allow create, update, delete: if isAdmin();
+    }
+    match /merchantLedger/{id} {
+      allow read: if isAdmin() || owns('merchantId');
+      allow create, update, delete: if isAdmin();
+    }
+    match /paymentWebhookReceipts/{id} { allow read, write: if false; }
+    match /auditLogs/{id} { allow read, create: if isAdmin(); allow update, delete: if false; }
     match /{document=**} { allow read, write: if isAdmin(); }
   }
 }

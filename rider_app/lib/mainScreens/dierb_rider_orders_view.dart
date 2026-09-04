@@ -61,10 +61,17 @@ class DierbRiderOrdersView extends StatelessWidget {
 
   Future<void> _setStatus(BuildContext context, DocumentReference<Map<String, dynamic>> ref, String status) async {
     try {
+      final snapshot = await ref.get();
+      final data = snapshot.data() ?? const <String, dynamic>{};
+      final collectingCod = status == OrderStatus.delivered.name && data['paymentMethod'] == 'cashOnDelivery';
       await ref.update(<String, dynamic>{
         'status': status,
         if (status == OrderStatus.onTheWay.name) 'onTheWayAt': FieldValue.serverTimestamp(),
         if (status == OrderStatus.delivered.name) 'deliveredAt': FieldValue.serverTimestamp(),
+        if (collectingCod) 'cashCollected': true,
+        if (collectingCod) 'collectedBy': riderId,
+        if (collectingCod) 'collectedAt': FieldValue.serverTimestamp(),
+        if (collectingCod) 'paymentStatus': 'cashCollected',
         'updatedAt': FieldValue.serverTimestamp(),
       });
       if (context.mounted) {
