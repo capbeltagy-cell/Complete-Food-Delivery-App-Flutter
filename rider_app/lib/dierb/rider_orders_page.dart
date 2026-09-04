@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:dierb_core/dierb_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import '../orders/order_conversation_page.dart';
 
 class RiderOrdersPage extends StatelessWidget {
   const RiderOrdersPage({super.key, required this.mode});
@@ -183,6 +184,24 @@ class _RiderOrderCardState extends State<_RiderOrderCard> {
               ),
             ],
             const SizedBox(height: 14),
+            if (widget.mode != RiderOrdersMode.available) ...[
+              Row(children: [
+                Expanded(child: OutlinedButton.icon(
+                  onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => OrderConversationPage(orderId: widget.order.id))),
+                  icon: const Icon(Icons.forum_outlined),
+                  label: const Text('محادثة العميل'),
+                )),
+                if (widget.mode == RiderOrdersMode.delivering) ...[
+                  const SizedBox(width: 8),
+                  Expanded(child: FilledButton.tonalIcon(
+                    onPressed: _busy ? null : _notifyArrival,
+                    icon: const Icon(Icons.location_on_rounded),
+                    label: const Text('وصلت'),
+                  )),
+                ],
+              ]),
+              const SizedBox(height: 9),
+            ],
             if (widget.mode == RiderOrdersMode.available)
               SizedBox(
                 width: double.infinity,
@@ -283,6 +302,26 @@ class _RiderOrderCardState extends State<_RiderOrderCard> {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(next.labelAr)));
     } catch (error) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.toString())));
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _notifyArrival() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+    setState(() => _busy = true);
+    try {
+      await widget.order.reference.collection('messages').add({
+        'senderId': user.uid,
+        'senderRole': 'rider',
+        'text': 'المندوب وصل لمكان التسليم',
+        'type': 'riderArrived',
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم إبلاغ العميل إنك وصلت')));
+    } on FirebaseException catch (error) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر إرسال التنبيه: ${error.code}')));
     } finally {
       if (mounted) setState(() => _busy = false);
     }

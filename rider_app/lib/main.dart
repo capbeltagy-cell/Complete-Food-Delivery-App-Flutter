@@ -7,6 +7,7 @@ import 'package:rider_app/splashScreen/splash_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'global/global.dart';
 import 'design/dierb_theme.dart';
+import 'notifications/dierb_notification_service.dart';
 
 const _dierbFirebase = FirebaseOptions(
   apiKey: 'AIzaSyBVUGFEPhyNrFwkMjEuV4PGk7EEQS_CQ5I',
@@ -38,6 +39,9 @@ Future<void> main() async {
     startupError = error;
   }
   runApp(MyApp(startupError: startupError));
+  if (startupError == null) {
+    DierbNotificationService.start(role: 'rider').catchError((Object error) => debugPrint('Notification setup error: $error'));
+  }
 }
 
 class MyApp extends StatelessWidget {
@@ -45,6 +49,7 @@ class MyApp extends StatelessWidget {
   final Object? startupError;
   @override
   Widget build(BuildContext context) => MaterialApp(
+    scaffoldMessengerKey: DierbNotificationService.messengerKey,
     title: 'ديرب للمندوبين',
     debugShowCheckedModeBanner: false,
     theme: DierbTheme.light(),

@@ -61,6 +61,10 @@ service cloud.firestore {
       return (resource.data.status == 'pickedUpByRider' && request.resource.data.status == 'onTheWay')
         || (resource.data.status == 'onTheWay' && request.resource.data.status == 'delivered');
     }
+    function orderParticipant(orderId) {
+      let order = get(/databases/$(database)/documents/orders/$(orderId)).data;
+      return signedIn() && request.auth.uid in [order.orderedBy, order.sellerUID, order.riderUID];
+    }
 
     match /admins/{uid} { allow read: if signedIn() && request.auth.uid == uid; allow write: if false; }
     match /users/{uid} {
@@ -137,6 +141,36 @@ service cloud.firestore {
             && request.resource.data.riderUID == request.auth.uid
             && request.resource.data.status == 'pickedUpByRider'
             && only(['riderUID','riderName','status','lat','lng','address','pickedUpAt','updatedAt']));
+      match /messages/{messageId} {
+        allow read: if orderParticipant(id);
+        allow create: if orderParticipant(id)
+          && request.resource.data.senderId == request.auth.uid
+          && request.resource.data.senderRole in ['customer','merchant','rider']
+          && request.resource.data.type in ['text','riderArrived']
+          && request.resource.data.text is string
+          && request.resource.data.text.size() > 0
+          && request.resource.data.text.size() <= 1000
+          && (request.resource.data.type != 'riderArrived'
+              || (request.resource.data.senderRole == 'rider'
+                  && get(/databases/$(database)/documents/orders/$(id)).data.riderUID == request.auth.uid));
+        allow update, delete: if isAdmin();
+      }
+    }
+    match /deviceTokens/{uid} {
+      allow read, write: if false;
+      match /tokens/{tokenId} {
+        allow read: if signedIn() && request.auth.uid == uid;
+        allow create, update: if signedIn()
+          && request.auth.uid == uid
+          && request.resource.data.uid == request.auth.uid;
+        allow delete: if signedIn() && request.auth.uid == uid;
+      }
+    }
+    match /notifications/{id} {
+      allow read: if signedIn() && resource.data.recipientId == request.auth.uid;
+      allow create, delete: if false;
+      allow update: if signedIn() && resource.data.recipientId == request.auth.uid
+        && only(['readAt']);
     }
     match /categories/{id} { allow read: if resource.data.active == true || isAdmin(); allow write: if isAdmin(); }
     match /cities/{id} { allow read: if resource.data.active == true || isAdmin(); allow write: if isAdmin(); }

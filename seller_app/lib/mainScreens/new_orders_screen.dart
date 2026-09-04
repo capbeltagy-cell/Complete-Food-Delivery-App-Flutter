@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:dierb_core/dierb_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import '../orders/order_conversation_page.dart';
 
 class NewOrdersScreen extends StatelessWidget {
   const NewOrdersScreen({super.key});
@@ -129,6 +130,12 @@ class _OrderCard extends StatelessWidget {
             Text('${total.toStringAsFixed(0)} ج.م', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
           ]),
           const SizedBox(height: 14),
+          OutlinedButton.icon(
+            onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => OrderConversationPage(orderId: doc.id))),
+            icon: const Icon(Icons.forum_outlined),
+            label: const Text('محادثة العميل والمندوب'),
+          ),
+          const SizedBox(height: 8),
           _actions(context, status),
         ]),
       ),

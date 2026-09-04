@@ -9,6 +9,7 @@ import 'package:user_app/dierb/app_shell.dart';
 import 'global/global.dart';
 import 'commerce/cart_controller.dart';
 import 'design/dierb_theme.dart';
+import 'notifications/dierb_notification_service.dart';
 
 const dierbFirebaseOptions = FirebaseOptions(
   apiKey: 'AIzaSyBVUGFEPhyNrFwkMjEuV4PGk7EEQS_CQ5I',
@@ -31,6 +32,11 @@ Future<void> main() async {
     firebaseStartupError = error;
   }
   runApp(MyApp(firebaseStartupError: firebaseStartupError));
+  if (firebaseStartupError == null) {
+    DierbNotificationService.start(role: 'customer').catchError((Object error) {
+      debugPrint('Notification setup error: $error');
+    });
+  }
 }
 
 class MyApp extends StatelessWidget {
@@ -46,6 +52,7 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (context) => CartController()),
       ],
       child: MaterialApp(
+        scaffoldMessengerKey: DierbNotificationService.messengerKey,
         title: 'ديرب',
         debugShowCheckedModeBanner: false,
         theme: DierbTheme.light(),

@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 import '../widgets/dierb_states.dart';
+import 'order_conversation_page.dart';
 
 enum _OrderFilter { active, completed, cancelled }
 
@@ -168,6 +169,15 @@ class _OrderCard extends StatelessWidget {
             ListTile(leading: const Icon(Icons.payments_outlined), title: const Text('طريقة الدفع'), subtitle: Text(data['paymentMethod'] == 'cashOnDelivery' ? 'الدفع عند الاستلام' : (data['paymentMethod'] ?? 'الدفع عند الاستلام').toString())),
             if ((data['customerPhone'] ?? '').toString().isNotEmpty) ListTile(leading: const Icon(Icons.phone_outlined), title: const Text('هاتف الاستلام'), subtitle: Text(data['customerPhone'].toString())),
             if ((data['notes'] ?? '').toString().isNotEmpty) ListTile(leading: const Icon(Icons.notes_rounded), title: const Text('ملاحظات'), subtitle: Text(data['notes'].toString())),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.tonalIcon(
+                onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => OrderConversationPage(orderId: id, role: 'customer'))),
+                icon: const Icon(Icons.forum_outlined),
+                label: const Text('محادثة التاجر والمندوب'),
+              ),
+            ),
+            const SizedBox(height: 12),
             const Text('المنتجات', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 17)),
             if (items.isEmpty) const Padding(padding: EdgeInsets.symmetric(vertical: 12), child: Text('تفاصيل المنتجات غير متاحة لهذا الطلب.')),
             ...items.map((item) => Padding(
