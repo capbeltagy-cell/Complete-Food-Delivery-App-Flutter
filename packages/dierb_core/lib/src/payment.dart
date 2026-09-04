@@ -74,7 +74,8 @@ class PaymentRecord {
       };
 }
 
-abstract final class PaymentStateMachine {
+class PaymentStateMachine {
+  PaymentStateMachine._();
   static const Map<PaymentStatus, Set<PaymentStatus>> _allowed = <PaymentStatus, Set<PaymentStatus>>{
     PaymentStatus.pending: <PaymentStatus>{PaymentStatus.processing, PaymentStatus.cancelled, PaymentStatus.failed},
     PaymentStatus.processing: <PaymentStatus>{PaymentStatus.paid, PaymentStatus.failed, PaymentStatus.cancelled},
@@ -106,7 +107,7 @@ class PaymentSession {
 
 /// Server-side contract only. Provider secrets and webhook verification must
 /// never be implemented in a Flutter/mobile or public web bundle.
-abstract interface class PaymentGateway {
+abstract class PaymentGateway {
   Future<PaymentSession> createPayment(PaymentSessionRequest request);
   Future<PaymentStatus> queryPayment(String providerReference);
   Future<void> refundPayment({required String providerReference, required int amountMinor, required String idempotencyKey});
