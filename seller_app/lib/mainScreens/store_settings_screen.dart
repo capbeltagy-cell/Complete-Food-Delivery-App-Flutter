@@ -100,8 +100,9 @@ class _StoreSettingsScreenState extends State<StoreSettingsScreen> {
       final body = await res.stream.bytesToString();
       if (res.statusCode < 200 || res.statusCode >= 300) throw Exception('HTTP ${res.statusCode}');
       final json = jsonDecode(body) as Map<String, dynamic>;
-      final url = json['url']?.toString() ?? '';
-      if (json['success'] != true || url.isEmpty) throw Exception('invalid upload response');
+      final returnedUrl = json['url']?.toString().trim() ?? '';
+      if (json['success'] != true || returnedUrl.isEmpty) throw Exception('invalid upload response');
+      final url = returnedUrl.startsWith('http') ? returnedUrl : _uploadEndpoint.resolve(returnedUrl).toString();
       if (mounted) {
         setState(() {
           if (logo) logoUrl = url;
