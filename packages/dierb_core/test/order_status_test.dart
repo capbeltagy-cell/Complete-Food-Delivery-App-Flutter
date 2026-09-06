@@ -24,6 +24,7 @@ void main() {
       OrderStatus.readyForPickup,
       OrderStatus.pickedUpByRider,
       OrderStatus.onTheWay,
+      OrderStatus.arrived,
       OrderStatus.delivered,
     ];
     for (var index = 0; index < path.length - 1; index++) {
