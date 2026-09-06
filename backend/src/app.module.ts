@@ -11,6 +11,8 @@ import { UploadsModule } from './uploads/uploads.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { ChatModule } from './chat/chat.module';
 import { AdminModule } from './admin/admin.module';
+import { APP_INTERCEPTOR } from '@nestjs/core';
+import { JsonSafeInterceptor } from './common/json-safe.interceptor';
 
 @Module({
   imports: [
@@ -23,5 +25,6 @@ import { AdminModule } from './admin/admin.module';
     CatalogModule, OrdersModule, CommunityModule, UploadsModule, NotificationsModule, ChatModule, AdminModule,
   ],
   controllers: [HealthController],
+  providers: [{ provide: APP_INTERCEPTOR, useClass: JsonSafeInterceptor }],
 })
 export class AppModule {}
