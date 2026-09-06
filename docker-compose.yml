@@ -30,13 +30,15 @@ services:
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-dierb}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-dierb}?schema=public
       REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
+      STORAGE_DRIVER: minio
       MINIO_ENDPOINT: minio
-      UPLOAD_ROOT: /app/uploads
-    volumes: [uploads_data:/app/uploads]
+      MINIO_PORT: 9000
+      MINIO_BUCKET: ${MINIO_BUCKET:-dierb-uploads}
     networks: [edge, data]
     depends_on:
       postgres: {condition: service_healthy}
       redis: {condition: service_healthy}
+      minio: {condition: service_healthy}
     healthcheck: {test: [CMD, curl, -fsS, http://localhost:3000/v1/health], interval: 15s, timeout: 5s, retries: 10}
     restart: unless-stopped
   nginx:
@@ -49,4 +51,4 @@ services:
     depends_on: {backend: {condition: service_healthy}}
     restart: unless-stopped
 networks: {edge: {}, data: {internal: true}}
-volumes: {postgres_data: {}, redis_data: {}, minio_data: {}, uploads_data: {}}
+volumes: {postgres_data: {}, redis_data: {}, minio_data: {}}
