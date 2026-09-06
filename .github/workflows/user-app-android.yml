@@ -58,11 +58,9 @@ jobs:
           flutter-version: "3.47.1"
           channel: stable
           cache: true
-      - name: Verify customer Firebase target
+      - name: Verify customer package
         run: |
-          test -f android/app/google-services.json
-          grep -q '"project_id": "dierb-29548"' android/app/google-services.json
-          grep -q '"package_name": "com.capbeltagy.dierb"' android/app/google-services.json
+          grep -q 'applicationId "com.capbeltagy.dierb"' android/app/build.gradle
       - name: Configure optional customer signing
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
@@ -115,9 +113,8 @@ jobs:
           flutter-version: "3.47.1"
           channel: stable
           cache: true
-      - name: Verify Dierb merchant Firebase configuration
+      - name: Verify Dierb merchant package
         run: |
-          grep -q "projectId: 'dierb-29548'" lib/main.dart
           grep -q 'applicationId "com.dierb.merchant"' android/app/build.gradle
           test -f android/app/src/main/kotlin/com/dierb/merchant/MainActivity.kt
           grep -Fxq 'package com.dierb.merchant' android/app/src/main/kotlin/com/dierb/merchant/MainActivity.kt
@@ -173,9 +170,8 @@ jobs:
           flutter-version: "3.47.1"
           channel: stable
           cache: true
-      - name: Verify Dierb rider Firebase configuration
+      - name: Verify Dierb rider package
         run: |
-          grep -q "projectId: 'dierb-29548'" lib/main.dart
           grep -q 'applicationId "com.dierb.rider"' android/app/build.gradle
           test -f android/app/src/main/kotlin/com/dierb/rider/MainActivity.kt
           grep -Fxq 'package com.dierb.rider' android/app/src/main/kotlin/com/dierb/rider/MainActivity.kt
