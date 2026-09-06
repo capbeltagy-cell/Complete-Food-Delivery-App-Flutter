@@ -6,6 +6,7 @@ import { JwtGuard } from '../auth/jwt.guard';import { JwtUser,Roles } from '../a
  @Get('cities') cities(){return this.s.cities();}
  @Get('categories') categories(){return this.s.categories();}
  @Get('stores') stores(@Query('cityId')cityId?:string,@Query('categoryId')categoryId?:string){return this.s.stores(cityId,categoryId);}
+ @Get('search') search(@Query('q')q:string,@Query('cityId')cityId?:string){return this.s.search(q,cityId);}
  @Get('stores/:id') store(@Param('id')id:string){return this.s.store(id);}
  @UseGuards(JwtGuard) @Roles(Role.merchant,Role.merchant_staff,Role.admin,Role.super_admin) @Post('products') create(@Req()r:Request&{user:JwtUser},@Body()d:CreateProductDto){return this.s.createProduct(r.user.sub,d);}
  @UseGuards(JwtGuard) @Roles(Role.merchant,Role.merchant_staff,Role.admin,Role.super_admin) @Patch('products/:id') update(@Req()r:Request&{user:JwtUser},@Param('id')id:string,@Body()d:Partial<CreateProductDto>){return this.s.updateProduct(r.user.sub,id,d);}

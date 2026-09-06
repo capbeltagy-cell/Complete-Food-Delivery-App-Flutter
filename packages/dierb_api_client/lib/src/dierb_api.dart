@@ -35,6 +35,7 @@ class DierbApi {
   Future<List<dynamic>> cities() => getList('catalog/cities', authenticated: false);
   Future<List<dynamic>> stores({String? cityId, String? categoryId}) => getList('catalog/stores', query: {if (cityId != null) 'cityId': cityId, if (categoryId != null) 'categoryId': categoryId}, authenticated: false);
   Future<Map<String, dynamic>> store(String id) => getMap('catalog/stores/$id', authenticated: false);
+  Future<Map<String, dynamic>> search(String query, {String? cityId}) => getMap('catalog/search', query: {'q': query, if(cityId!=null)'cityId':cityId}, authenticated: false);
   Future<Map<String, dynamic>> createProduct(Map<String, dynamic> body) => post('catalog/products', body);
   Future<Map<String, dynamic>> updateProduct(String id, Map<String, dynamic> body) => patch('catalog/products/$id', body);
   Future<void> archiveProduct(String id) => delete('catalog/products/$id');
