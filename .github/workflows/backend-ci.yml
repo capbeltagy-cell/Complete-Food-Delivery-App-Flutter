@@ -35,17 +35,12 @@ jobs:
       - run: npm install
       - run: npx prisma validate
       - run: npx prisma generate
-      - name: Generate and apply clean initial migration
-        run: |
-          mkdir -p prisma/migrations/0001_init
-          npx prisma migrate diff --from-empty --to-schema-datamodel prisma/schema.prisma --script > prisma/migrations/0001_init/migration.sql
-          npx prisma migrate deploy
+      - name: Apply committed PostgreSQL migrations
+        run: npx prisma migrate deploy
       - run: npm run build
       - run: npm test
+      - run: npm run test:e2e
       - run: npm run prisma:seed
-      - name: Upload generated initial migration
-        uses: actions/upload-artifact@v4
-        with: {name: Dierb-Initial-PostgreSQL-Migration, path: backend/prisma/migrations/0001_init/migration.sql, retention-days: 30}
   docker:
     runs-on: ubuntu-latest
     steps:
