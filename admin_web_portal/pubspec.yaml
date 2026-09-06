@@ -30,6 +30,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  dierb_api_client:
+    path: ../packages/dierb_api_client
   dierb_core:
     path: ../packages/dierb_core
 

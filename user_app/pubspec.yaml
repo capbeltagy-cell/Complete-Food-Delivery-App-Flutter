@@ -32,6 +32,8 @@ dependencies:
     sdk: flutter
   dierb_core:
     path: ../packages/dierb_core
+  dierb_api_client:
+    path: ../packages/dierb_api_client
 
 
   # The following adds the Cupertino Icons font to your application.

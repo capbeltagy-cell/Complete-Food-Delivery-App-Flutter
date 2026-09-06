@@ -1,0 +1,127 @@
+generator client { provider = "prisma-client-js" }
+datasource db { provider = "postgresql" url = env("DATABASE_URL") }
+
+enum Role { customer merchant merchant_staff rider admin super_admin }
+enum ApprovalStatus { pending approved rejected suspended }
+enum OrderStatus { received waitingMerchantApproval acceptedByMerchant preparing readyForPickup pickedUpByRider onTheWay arrived delivered rejected cancelled }
+enum ContentStatus { draft pending published rejected archived }
+enum NotificationChannel { in_app push email sms }
+
+model User {
+  id String @id @default(uuid()) @db.Uuid
+  email String? @unique
+  phone String? @unique
+  passwordHash String
+  role Role @default(customer)
+  name String
+  avatarUrl String?
+  active Boolean @default(true)
+  verifiedAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+  customerProfile CustomerProfile?
+  merchant Merchant?
+  rider Rider?
+  sessions Session[]
+  addresses Address[]
+  orders Order[] @relation("CustomerOrders")
+  notifications Notification[]
+  questions Question[]
+  answers Answer[]
+  favorites Favorite[]
+  reviews Review[]
+  reports Report[]
+  chatParticipants ChatParticipant[]
+  messages ChatMessage[]
+  auditLogs AuditLog[] @relation("AuditActor")
+}
+
+model Session {
+  id String @id @default(uuid()) @db.Uuid
+  userId String @db.Uuid
+  tokenHash String @unique
+  deviceName String?
+  ipAddress String?
+  userAgent String?
+  expiresAt DateTime
+  revokedAt DateTime?
+  replacedById String? @db.Uuid
+  createdAt DateTime @default(now())
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([userId, revokedAt])
+}
+
+model PasswordReset {
+  id String @id @default(uuid()) @db.Uuid
+  userId String @db.Uuid
+  tokenHash String @unique
+  expiresAt DateTime
+  usedAt DateTime?
+  createdAt DateTime @default(now())
+  @@index([userId, expiresAt])
+}
+
+model CustomerProfile { id String @id @default(uuid()) @db.Uuid userId String @unique @db.Uuid defaultAddressId String? @db.Uuid user User @relation(fields:[userId], references:[id], onDelete:Cascade) }
+model Merchant { id String @id @default(uuid()) @db.Uuid userId String @unique @db.Uuid status ApprovalStatus @default(pending) businessName String taxNumber String? rejectionReason String? approvedAt DateTime? createdAt DateTime @default(now()) updatedAt DateTime @updatedAt user User @relation(fields:[userId],references:[id]) stores Store[] staff MerchantStaff[] }
+model MerchantStaff { id String @id @default(uuid()) @db.Uuid merchantId String @db.Uuid userId String @db.Uuid permissions String[] active Boolean @default(true) createdAt DateTime @default(now()) merchant Merchant @relation(fields:[merchantId],references:[id],onDelete:Cascade) @@unique([merchantId,userId]) }
+
+model City { id String @id @default(uuid()) @db.Uuid nameAr String nameEn String slug String @unique active Boolean @default(true) areas Area[] stores Store[] @@index([active]) }
+model Area { id String @id @default(uuid()) @db.Uuid cityId String @db.Uuid nameAr String nameEn String slug String active Boolean @default(true) city City @relation(fields:[cityId],references:[id],onDelete:Cascade) villages Village[] stores Store[] @@unique([cityId,slug]) }
+model Village { id String @id @default(uuid()) @db.Uuid areaId String @db.Uuid nameAr String nameEn String slug String active Boolean @default(true) area Area @relation(fields:[areaId],references:[id],onDelete:Cascade) stores Store[] @@unique([areaId,slug]) }
+model ServiceZone { id String @id @default(uuid()) @db.Uuid name String cityId String @db.Uuid areaIds String[] polygon Json? active Boolean @default(true) deliveryFeePiasters Int @default(0) createdAt DateTime @default(now()) updatedAt DateTime @updatedAt stores StoreServiceZone[] riders RiderServiceZone[] }
+
+model Category { id String @id @default(uuid()) @db.Uuid parentId String? @db.Uuid nameAr String nameEn String slug String @unique icon String? imageUrl String? type String sortOrder Int @default(0) active Boolean @default(true) featured Boolean @default(false) products Product[] stores Store[] @@index([active,type,sortOrder]) }
+model Store {
+ id String @id @default(uuid()) @db.Uuid merchantId String @db.Uuid categoryId String @db.Uuid cityId String @db.Uuid areaId String? @db.Uuid villageId String? @db.Uuid
+ name String description String? logoUrl String? coverUrl String? phone String whatsapp String? address String latitude Decimal? @db.Decimal(10,7) longitude Decimal? @db.Decimal(10,7)
+ openingHours Json? isOpen Boolean @default(false) deliveryEnabled Boolean @default(true) pickupEnabled Boolean @default(true) minimumOrderPiasters Int @default(0) deliveryFeePiasters Int @default(0)
+ rating Decimal @default(0) @db.Decimal(3,2) reviewCount Int @default(0) verified Boolean @default(false) featured Boolean @default(false) status ApprovalStatus @default(pending)
+ createdAt DateTime @default(now()) updatedAt DateTime @updatedAt deletedAt DateTime?
+ merchant Merchant @relation(fields:[merchantId],references:[id]) category Category @relation(fields:[categoryId],references:[id]) city City @relation(fields:[cityId],references:[id]) area Area? @relation(fields:[areaId],references:[id]) village Village? @relation(fields:[villageId],references:[id])
+ products Product[] offers Offer[] orders Order[] zones StoreServiceZone[] reviews Review[]
+ @@index([cityId,categoryId,status,isOpen]) @@index([merchantId,status])
+}
+model StoreServiceZone { storeId String @db.Uuid zoneId String @db.Uuid store Store @relation(fields:[storeId],references:[id],onDelete:Cascade) zone ServiceZone @relation(fields:[zoneId],references:[id],onDelete:Cascade) @@id([storeId,zoneId]) }
+
+model Product { id String @id @default(uuid()) @db.Uuid storeId String @db.Uuid categoryId String? @db.Uuid name String description String? pricePiasters Int salePricePiasters Int? stock Int? available Boolean @default(true) featured Boolean @default(false) deliveryEligible Boolean @default(true) options Json? createdAt DateTime @default(now()) updatedAt DateTime @updatedAt deletedAt DateTime? store Store @relation(fields:[storeId],references:[id]) category Category? @relation(fields:[categoryId],references:[id]) images ProductImage[] favorites Favorite[] reviews Review[] @@index([storeId,available]) @@index([categoryId,available,featured]) }
+model ProductImage { id String @id @default(uuid()) @db.Uuid productId String @db.Uuid url String storageKey String altText String? sortOrder Int @default(0) createdAt DateTime @default(now()) product Product @relation(fields:[productId],references:[id],onDelete:Cascade) @@index([productId,sortOrder]) }
+model Offer { id String @id @default(uuid()) @db.Uuid storeId String @db.Uuid title String description String? imageUrl String? startsAt DateTime endsAt DateTime status ContentStatus @default(pending) sponsored Boolean @default(false) createdAt DateTime @default(now()) updatedAt DateTime @updatedAt store Store @relation(fields:[storeId],references:[id]) @@index([status,startsAt,endsAt]) }
+
+model Cart { id String @id @default(uuid()) @db.Uuid customerId String @db.Uuid storeId String @db.Uuid createdAt DateTime @default(now()) updatedAt DateTime @updatedAt items CartItem[] @@unique([customerId,storeId]) }
+model CartItem { id String @id @default(uuid()) @db.Uuid cartId String @db.Uuid productId String @db.Uuid quantity Int selectedOptions Json? cart Cart @relation(fields:[cartId],references:[id],onDelete:Cascade) @@unique([cartId,productId]) }
+model Address { id String @id @default(uuid()) @db.Uuid userId String @db.Uuid label String recipientName String phone String addressLine String cityId String @db.Uuid areaId String? @db.Uuid villageId String? @db.Uuid latitude Decimal? @db.Decimal(10,7) longitude Decimal? @db.Decimal(10,7) isDefault Boolean @default(false) createdAt DateTime @default(now()) updatedAt DateTime @updatedAt user User @relation(fields:[userId],references:[id],onDelete:Cascade) @@index([userId,isDefault]) }
+
+model Order {
+ id String @id @default(uuid()) @db.Uuid orderNumber BigInt @unique @default(autoincrement()) customerId String @db.Uuid storeId String @db.Uuid riderId String? @db.Uuid addressId String? @db.Uuid
+ status OrderStatus @default(waitingMerchantApproval) subtotalPiasters Int deliveryFeePiasters Int discountPiasters Int @default(0) totalPiasters Int paymentMethod String @default("cashOnDelivery") paymentStatus String @default("awaitingCashCollection")
+ customerName String customerPhone String deliveryAddress Json notes String? claimedAt DateTime? deliveredAt DateTime? cancelledAt DateTime? createdAt DateTime @default(now()) updatedAt DateTime @updatedAt
+ customer User @relation("CustomerOrders",fields:[customerId],references:[id]) store Store @relation(fields:[storeId],references:[id]) rider Rider? @relation(fields:[riderId],references:[id]) items OrderItem[] history OrderStatusHistory[] riderJobs RiderJob[] conversation Conversation? notifications Notification[]
+ @@index([customerId,createdAt]) @@index([storeId,status,createdAt]) @@index([riderId,status,createdAt]) @@index([status,createdAt])
+}
+model OrderItem { id String @id @default(uuid()) @db.Uuid orderId String @db.Uuid productId String? @db.Uuid name String imageUrl String? unitPricePiasters Int quantity Int selectedOptions Json? order Order @relation(fields:[orderId],references:[id],onDelete:Cascade) @@index([orderId]) }
+model OrderStatusHistory { id String @id @default(uuid()) @db.Uuid orderId String @db.Uuid fromStatus OrderStatus? toStatus OrderStatus actorId String @db.Uuid actorRole Role note String? createdAt DateTime @default(now()) order Order @relation(fields:[orderId],references:[id],onDelete:Cascade) @@index([orderId,createdAt]) }
+
+model Rider { id String @id @default(uuid()) @db.Uuid userId String @unique @db.Uuid status ApprovalStatus @default(pending) available Boolean @default(false) latitude Decimal? @db.Decimal(10,7) longitude Decimal? @db.Decimal(10,7) lastLocationAt DateTime? createdAt DateTime @default(now()) updatedAt DateTime @updatedAt user User @relation(fields:[userId],references:[id]) orders Order[] jobs RiderJob[] zones RiderServiceZone[] }
+model RiderServiceZone { riderId String @db.Uuid zoneId String @db.Uuid rider Rider @relation(fields:[riderId],references:[id],onDelete:Cascade) zone ServiceZone @relation(fields:[zoneId],references:[id],onDelete:Cascade) @@id([riderId,zoneId]) }
+model RiderJob { id String @id @default(uuid()) @db.Uuid orderId String @db.Uuid riderId String @db.Uuid status String acceptedAt DateTime? completedAt DateTime? createdAt DateTime @default(now()) order Order @relation(fields:[orderId],references:[id]) rider Rider @relation(fields:[riderId],references:[id]) @@index([riderId,status,createdAt]) }
+model DeliveryTracking { id String @id @default(uuid()) @db.Uuid orderId String @db.Uuid riderId String @db.Uuid latitude Decimal @db.Decimal(10,7) longitude Decimal @db.Decimal(10,7) recordedAt DateTime @default(now()) @@index([orderId,recordedAt]) }
+
+model Conversation { id String @id @default(uuid()) @db.Uuid orderId String? @unique @db.Uuid type String createdAt DateTime @default(now()) updatedAt DateTime @updatedAt order Order? @relation(fields:[orderId],references:[id]) participants ChatParticipant[] messages ChatMessage[] }
+model ChatParticipant { conversationId String @db.Uuid userId String @db.Uuid joinedAt DateTime @default(now()) lastReadAt DateTime? conversation Conversation @relation(fields:[conversationId],references:[id],onDelete:Cascade) user User @relation(fields:[userId],references:[id]) @@id([conversationId,userId]) }
+model ChatMessage { id String @id @default(uuid()) @db.Uuid conversationId String @db.Uuid senderId String @db.Uuid type String @default("text") body String attachmentUrl String? createdAt DateTime @default(now()) editedAt DateTime? deletedAt DateTime? conversation Conversation @relation(fields:[conversationId],references:[id],onDelete:Cascade) sender User @relation(fields:[senderId],references:[id]) receipts MessageReceipt[] @@index([conversationId,createdAt]) }
+model MessageReceipt { messageId String @db.Uuid userId String @db.Uuid readAt DateTime? message ChatMessage @relation(fields:[messageId],references:[id],onDelete:Cascade) @@id([messageId,userId]) }
+
+model Notification { id String @id @default(uuid()) @db.Uuid userId String @db.Uuid orderId String? @db.Uuid title String body String type String channel NotificationChannel @default(in_app) data Json? readAt DateTime? sentAt DateTime? createdAt DateTime @default(now()) user User @relation(fields:[userId],references:[id],onDelete:Cascade) order Order? @relation(fields:[orderId],references:[id]) @@index([userId,readAt,createdAt]) }
+model DeviceToken { id String @id @default(uuid()) @db.Uuid userId String @db.Uuid token String @unique platform String active Boolean @default(true) createdAt DateTime @default(now()) updatedAt DateTime @updatedAt @@index([userId,active]) }
+
+model Question { id String @id @default(uuid()) @db.Uuid authorId String @db.Uuid title String body String type String cityId String @db.Uuid areaId String? @db.Uuid villageId String? @db.Uuid status ContentStatus @default(published) sponsored Boolean @default(false) helpfulCount Int @default(0) answerCount Int @default(0) createdAt DateTime @default(now()) updatedAt DateTime @updatedAt deletedAt DateTime? author User @relation(fields:[authorId],references:[id]) answers Answer[] likes QuestionLike[] @@index([cityId,status,createdAt]) }
+model Answer { id String @id @default(uuid()) @db.Uuid questionId String @db.Uuid authorId String @db.Uuid body String status ContentStatus @default(published) helpfulCount Int @default(0) createdAt DateTime @default(now()) updatedAt DateTime @updatedAt question Question @relation(fields:[questionId],references:[id],onDelete:Cascade) author User @relation(fields:[authorId],references:[id]) @@index([questionId,status,createdAt]) }
+model QuestionLike { questionId String @db.Uuid userId String @db.Uuid createdAt DateTime @default(now()) question Question @relation(fields:[questionId],references:[id],onDelete:Cascade) @@id([questionId,userId]) }
+model Report { id String @id @default(uuid()) @db.Uuid reporterId String @db.Uuid targetType String targetId String reason String status String @default("open") resolvedById String? @db.Uuid createdAt DateTime @default(now()) updatedAt DateTime @updatedAt reporter User @relation(fields:[reporterId],references:[id]) @@index([status,createdAt]) }
+model Review { id String @id @default(uuid()) @db.Uuid authorId String @db.Uuid storeId String? @db.Uuid productId String? @db.Uuid rating Int body String? status ContentStatus @default(published) createdAt DateTime @default(now()) updatedAt DateTime @updatedAt author User @relation(fields:[authorId],references:[id]) store Store? @relation(fields:[storeId],references:[id]) product Product? @relation(fields:[productId],references:[id]) @@index([storeId,status,createdAt]) }
+model Favorite { userId String @db.Uuid productId String @db.Uuid createdAt DateTime @default(now()) user User @relation(fields:[userId],references:[id],onDelete:Cascade) product Product @relation(fields:[productId],references:[id],onDelete:Cascade) @@id([userId,productId]) }
+model Coupon { id String @id @default(uuid()) @db.Uuid code String @unique discountType String value Int startsAt DateTime endsAt DateTime usageLimit Int? perUserLimit Int @default(1) active Boolean @default(true) createdAt DateTime @default(now()) updatedAt DateTime @updatedAt }
+model Upload { id String @id @default(uuid()) @db.Uuid ownerId String @db.Uuid storageKey String @unique url String mimeType String bytes Int purpose String createdAt DateTime @default(now()) deletedAt DateTime? @@index([ownerId,purpose]) }
+model AppSetting { key String @id value Json public Boolean @default(false) updatedById String? @db.Uuid updatedAt DateTime @updatedAt }
+model AuditLog { id String @id @default(uuid()) @db.Uuid actorId String? @db.Uuid action String entityType String entityId String? before Json? after Json? ipAddress String? requestId String? createdAt DateTime @default(now()) actor User? @relation("AuditActor",fields:[actorId],references:[id]) @@index([entityType,entityId,createdAt]) @@index([actorId,createdAt]) }

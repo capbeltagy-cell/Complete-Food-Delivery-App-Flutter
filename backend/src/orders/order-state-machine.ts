@@ -1,0 +1,5 @@
+import{BadRequestException}from'@nestjs/common';import{OrderStatus,Role}from'@prisma/client';
+const transitions:Record<OrderStatus,Partial<Record<Role,OrderStatus[]>>>={
+ received:{},waitingMerchantApproval:{merchant:[OrderStatus.acceptedByMerchant,OrderStatus.rejected],merchant_staff:[OrderStatus.acceptedByMerchant,OrderStatus.rejected],customer:[OrderStatus.cancelled]},acceptedByMerchant:{merchant:[OrderStatus.preparing],merchant_staff:[OrderStatus.preparing],customer:[OrderStatus.cancelled]},preparing:{merchant:[OrderStatus.readyForPickup],merchant_staff:[OrderStatus.readyForPickup]},readyForPickup:{rider:[OrderStatus.pickedUpByRider]},pickedUpByRider:{rider:[OrderStatus.onTheWay]},onTheWay:{rider:[OrderStatus.arrived]},arrived:{rider:[OrderStatus.delivered]},delivered:{},rejected:{},cancelled:{}
+};
+export function assertTransition(from:OrderStatus,to:OrderStatus,role:Role){if(!transitions[from]?.[role]?.includes(to))throw new BadRequestException(`Invalid order transition: ${from} -> ${to} for ${role}`);}

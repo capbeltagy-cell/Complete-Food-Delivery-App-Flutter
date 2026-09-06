@@ -1,0 +1,2 @@
+import{Injectable}from'@nestjs/common';import{PrismaService}from'../prisma/prisma.service';
+@Injectable()export class NotificationsService{constructor(private readonly prisma:PrismaService){}create(userId:string,title:string,body:string,type:string,orderId?:string){return this.prisma.notification.create({data:{userId,title,body,type,orderId}});}list(userId:string){return this.prisma.notification.findMany({where:{userId},take:100,orderBy:{createdAt:'desc'}});}}

@@ -11,6 +11,8 @@ dependencies:
     sdk: flutter
   dierb_core:
     path: ../packages/dierb_core
+  dierb_api_client:
+    path: ../packages/dierb_api_client
   cupertino_icons: ^1.0.2
   firebase_core: ^4.14.0
   firebase_auth: ^6.6.0

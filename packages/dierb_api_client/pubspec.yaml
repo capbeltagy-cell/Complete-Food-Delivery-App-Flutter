@@ -1,0 +1,10 @@
+name: dierb_api_client
+description: Shared authenticated REST client for Dierb applications.
+version: 1.0.0
+environment: {sdk: ">=3.3.0 <4.0.0"}
+dependencies:
+  http: ^1.4.0
+  flutter_secure_storage: ^9.2.4
+dev_dependencies:
+  test: ^1.25.0
+  lints: ^5.1.1
