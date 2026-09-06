@@ -14,11 +14,6 @@ dependencies:
   dierb_api_client:
     path: ../packages/dierb_api_client
   cupertino_icons: ^1.0.2
-  firebase_core: ^4.14.0
-  firebase_auth: ^6.6.0
-  cloud_firestore: ^6.9.0
-  firebase_storage: ^13.5.0
-  firebase_messaging: ^16.1.1
   image_picker: ^0.8.9
   http: ^1.2.2
   geolocator: ^9.0.2

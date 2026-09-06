@@ -1,5 +1,5 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:dierb_api_client/dierb_api_client.dart';
 
 class DierbMessage extends StatelessWidget {
   const DierbMessage({
@@ -43,19 +43,10 @@ class DierbMessage extends StatelessWidget {
   }
 }
 
-String firestoreErrorMessage(Object error) {
-  if (error is FirebaseException) {
-    switch (error.code) {
-      case 'permission-denied':
-        return 'لا يوجد صلاحية لعرض هذه البيانات. لو المشكلة مستمرة سجّل خروج ثم دخول، أو تواصل مع الدعم.';
-      case 'unavailable':
-      case 'deadline-exceeded':
-        return 'تعذر الاتصال بخدمات ديرب. تأكد من الإنترنت وحاول مرة أخرى.';
-      case 'not-found':
-        return 'البيانات المطلوبة غير موجودة.';
-      default:
-        return 'تعذر تحميل البيانات (${error.code}).';
-    }
-  }
+String apiErrorMessage(Object error) {
+  if (error is DierbApiException) return error.message;
   return 'تعذر تحميل البيانات. حاول مرة أخرى.';
 }
+
+@Deprecated('Use apiErrorMessage')
+String firestoreErrorMessage(Object error) => apiErrorMessage(error);
