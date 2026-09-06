@@ -1,32 +1,5 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'dart:async';
+import 'package:dierb_api_client/dierb_api_client.dart';
 import 'package:flutter/material.dart';
-
-class OrderConversationPage extends StatefulWidget {
-  const OrderConversationPage({super.key, required this.orderId, this.role = 'merchant'});
-  final String orderId;
-  final String role;
-  @override State<OrderConversationPage> createState() => _State();
-}
-class _State extends State<OrderConversationPage> {
-  final input = TextEditingController(); bool sending = false;
-  @override void dispose() { input.dispose(); super.dispose(); }
-  Future<void> send() async {
-    final user = FirebaseAuth.instance.currentUser; final text = input.text.trim();
-    if (user == null || text.isEmpty || sending) return;
-    setState(() => sending = true);
-    try { await FirebaseFirestore.instance.collection('orders').doc(widget.orderId).collection('messages').add({'senderId': user.uid, 'senderRole': widget.role, 'text': text, 'type': 'text', 'createdAt': FieldValue.serverTimestamp()}); input.clear(); }
-    on FirebaseException catch (e) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر الإرسال: ${e.code}'))); }
-    finally { if (mounted) setState(() => sending = false); }
-  }
-  @override Widget build(BuildContext context) => Scaffold(appBar: AppBar(title: const Text('محادثة الطلب', style: TextStyle(fontWeight: FontWeight.w900))), body: Column(children: [
-    Expanded(child: StreamBuilder<QuerySnapshot<Map<String,dynamic>>>(stream: FirebaseFirestore.instance.collection('orders').doc(widget.orderId).collection('messages').orderBy('createdAt', descending: true).limit(100).snapshots(), builder: (_, snap) {
-      if (snap.hasError) return const Center(child: Text('تعذر تحميل المحادثة'));
-      if (!snap.hasData) return const Center(child: CircularProgressIndicator());
-      if (snap.data!.docs.isEmpty) return const Center(child: Text('لا توجد رسائل بعد'));
-      final uid = FirebaseAuth.instance.currentUser?.uid;
-      return ListView.builder(reverse: true, padding: const EdgeInsets.all(14), itemCount: snap.data!.docs.length, itemBuilder: (_, i) { final d=snap.data!.docs[i].data(); final mine=d['senderId']==uid; return Align(alignment: mine?AlignmentDirectional.centerStart:AlignmentDirectional.centerEnd, child: Container(margin: const EdgeInsets.symmetric(vertical:4), padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: d['type']=='riderArrived'?const Color(0xFFFFE8B5):mine?const Color(0xFFDCEFE6):Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: const Color(0xFFDDE5E0))), child: Text((d['text']??'').toString(), style: const TextStyle(fontWeight: FontWeight.w700)))); });
-    })),
-    SafeArea(top:false, child: Padding(padding: const EdgeInsets.all(12), child: Row(children:[Expanded(child:TextField(controller:input, decoration:const InputDecoration(hintText:'اكتب رسالة عن الطلب...'))), const SizedBox(width:8), IconButton.filled(onPressed:sending?null:send, icon:const Icon(Icons.send_rounded))])))
-  ]));
-}
+class OrderConversationPage extends StatefulWidget{const OrderConversationPage({super.key,required this.orderId});final String orderId;@override State<OrderConversationPage>createState()=>_State();}
+class _State extends State<OrderConversationPage>{final api=DierbApi(),text=TextEditingController();List<dynamic>messages=const[];String uid='';bool busy=false;Timer?timer;@override void initState(){super.initState();_start();}Future<void>_start()async{uid=(await api.profile())['id'].toString();await _load();timer=Timer.periodic(const Duration(seconds:5),(_)=>_load());}Future<void>_load()async{try{final v=await api.chatMessages(widget.orderId);if(mounted)setState(()=>messages=v);}catch(_){}}Future<void>_send()async{if(text.text.trim().isEmpty)return;setState(()=>busy=true);try{await api.sendChatMessage(widget.orderId,text.text.trim());text.clear();await _load();}finally{if(mounted)setState(()=>busy=false);}}@override void dispose(){timer?.cancel();api.close();text.dispose();super.dispose();}@override Widget build(BuildContext context)=>Scaffold(appBar:AppBar(title:const Text('محادثة الطلب')),body:Column(children:[Expanded(child:messages.isEmpty?const Center(child:Text('ابدأ محادثة آمنة مع أطراف الطلب')):ListView.builder(reverse:true,padding:const EdgeInsets.all(14),itemCount:messages.length,itemBuilder:(_,i){final m=Map<String,dynamic>.from(messages[i]as Map),mine=m['senderId']==uid;return Align(alignment:mine?AlignmentDirectional.centerStart:AlignmentDirectional.centerEnd,child:Card(color:mine?const Color(0xFFDCEFE6):null,child:Padding(padding:const EdgeInsets.all(12),child:Text((m['body']??'').toString()))));})),SafeArea(top:false,child:Padding(padding:const EdgeInsets.all(10),child:Row(children:[Expanded(child:TextField(controller:text,decoration:const InputDecoration(hintText:'اكتب رسالة...'))),IconButton.filled(onPressed:busy?null:_send,icon:const Icon(Icons.send_rounded))])))]));}
