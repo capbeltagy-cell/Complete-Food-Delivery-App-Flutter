@@ -47,6 +47,3 @@ String apiErrorMessage(Object error) {
   if (error is DierbApiException) return error.message;
   return 'تعذر تحميل البيانات. حاول مرة أخرى.';
 }
-
-@Deprecated('Use apiErrorMessage')
-String firestoreErrorMessage(Object error) => apiErrorMessage(error);
