@@ -28,6 +28,7 @@ class DierbApi {
   Future<Map<String, dynamic>> createAddress(Map<String, dynamic> body) => post('account/addresses', body);
   Future<void> deleteAddress(String id) => delete('account/addresses/$id');
   Future<List<dynamic>> categories() => getList('catalog/categories', authenticated: false);
+  Future<List<dynamic>> cities() => getList('catalog/cities', authenticated: false);
   Future<List<dynamic>> stores({String? cityId, String? categoryId}) => getList('catalog/stores', query: {if (cityId != null) 'cityId': cityId, if (categoryId != null) 'categoryId': categoryId}, authenticated: false);
   Future<Map<String, dynamic>> store(String id) => getMap('catalog/stores/$id', authenticated: false);
   Future<Map<String, dynamic>> createOrder(Map<String, dynamic> body) => post('orders', body);
@@ -40,7 +41,13 @@ class DierbApi {
   Future<Map<String, dynamic>> createQuestion(Map<String, dynamic> body) => post('community/questions', body);
   Future<Map<String, dynamic>> answerQuestion(String id, String body) => post('community/questions/$id/answers', {'body': body});
   Future<Map<String, dynamic>> markHelpful(String id) => post('community/questions/$id/helpful', {});
+  Future<Map<String, dynamic>> report({required String targetType, required String targetId, required String reason}) => post('community/reports', {'targetType': targetType, 'targetId': targetId, 'reason': reason});
+  Future<List<dynamic>> chatMessages(String orderId, {String? cursor}) => getList('orders/$orderId/chat', query: {if (cursor != null) 'cursor': cursor});
+  Future<Map<String, dynamic>> sendChatMessage(String orderId, String body, {String type = 'text'}) => post('orders/$orderId/chat', {'body': body, 'type': type});
   Future<List<dynamic>> notifications() => getList('notifications');
+  Future<int> unreadNotificationCount() async => ((await getMap('notifications/unread-count'))['count'] as num?)?.toInt() ?? 0;
+  Future<Map<String, dynamic>> markNotificationRead(String id) => patch('notifications/$id/read', const {});
+  Future<Map<String, dynamic>> markAllNotificationsRead() => patch('notifications/read-all', const {});
 
   Future<List<dynamic>> getList(String path, {Map<String, String>? query, bool authenticated = true}) async => (await _request('GET', path, query: query, authenticated: authenticated)) as List<dynamic>;
   Future<Map<String, dynamic>> getMap(String path, {Map<String, String>? query, bool authenticated = true}) async => (await _request('GET', path, query: query, authenticated: authenticated)) as Map<String, dynamic>;

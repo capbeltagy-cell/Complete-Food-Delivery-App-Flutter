@@ -43,17 +43,20 @@ class CommunityPost {
   final bool sponsored;
   final List<String> images;
 
-  factory CommunityPost.fromMap(String id, Map<String, dynamic> map) => CommunityPost(
-        id: id, authorId: map['authorId']?.toString() ?? '', authorName: map['authorName']?.toString() ?? 'مستخدم ديرب',
-        authorType: _enumValue(CommunityAuthorType.values, map['authorType'], CommunityAuthorType.user),
-        authorVerified: map['authorVerified'] == true, title: map['title']?.toString() ?? '', body: map['body']?.toString() ?? '',
+  factory CommunityPost.fromMap(String id, Map<String, dynamic> map) {
+    final author = map['author'] is Map ? Map<String, dynamic>.from(map['author'] as Map) : const <String, dynamic>{};
+    return CommunityPost(
+        id: id, authorId: map['authorId']?.toString() ?? author['id']?.toString() ?? '', authorName: map['authorName']?.toString() ?? author['name']?.toString() ?? 'مستخدم ديرب',
+        authorType: _enumValue(CommunityAuthorType.values, map['authorType'] ?? author['role'], CommunityAuthorType.user),
+        authorVerified: map['authorVerified'] == true || author['verifiedAt'] != null, title: map['title']?.toString() ?? '', body: map['body']?.toString() ?? '',
         type: _enumValue(CommunityPostType.values, map['type'] ?? map['category'], CommunityPostType.question),
         categoryId: map['categoryId']?.toString(), cityId: map['cityId']?.toString() ?? '', areaId: map['areaId']?.toString(),
         villageId: map['villageId']?.toString(), createdAt: _dateFromValue(map['createdAt']), updatedAt: _dateFromValue(map['updatedAt']),
-        replyCount: (map['replyCount'] as num?)?.toInt() ?? 0, helpfulCount: (map['helpfulCount'] as num?)?.toInt() ?? 0,
+        replyCount: (map['replyCount'] as num?)?.toInt() ?? (map['answerCount'] as num?)?.toInt() ?? 0, helpfulCount: (map['helpfulCount'] as num?)?.toInt() ?? 0,
         status: _enumValue(CommunityContentStatus.values, map['status'], CommunityContentStatus.published),
         sponsored: map['sponsored'] == true, images: List<String>.from(map['images'] as List? ?? const <String>[]),
       );
+  }
 
   Map<String, dynamic> toMap() => <String, dynamic>{
         'authorId': authorId, 'authorName': authorName, 'authorType': authorType.name, 'authorVerified': authorVerified,
@@ -81,11 +84,14 @@ class CommunityReply {
   final int helpfulCount;
   final CommunityContentStatus status;
 
-  factory CommunityReply.fromMap(String id, String postId, Map<String, dynamic> map) => CommunityReply(
-        id: id, postId: postId, authorId: map['authorId']?.toString() ?? '', authorName: map['authorName']?.toString() ?? 'مستخدم ديرب',
-        authorType: _enumValue(CommunityAuthorType.values, map['authorType'], CommunityAuthorType.user),
-        authorVerified: map['authorVerified'] == true, body: map['body']?.toString() ?? '', createdAt: _dateFromValue(map['createdAt']),
+  factory CommunityReply.fromMap(String id, String postId, Map<String, dynamic> map) {
+    final author = map['author'] is Map ? Map<String, dynamic>.from(map['author'] as Map) : const <String, dynamic>{};
+    return CommunityReply(
+        id: id, postId: postId, authorId: map['authorId']?.toString() ?? author['id']?.toString() ?? '', authorName: map['authorName']?.toString() ?? author['name']?.toString() ?? 'مستخدم ديرب',
+        authorType: _enumValue(CommunityAuthorType.values, map['authorType'] ?? author['role'], CommunityAuthorType.user),
+        authorVerified: map['authorVerified'] == true || author['verifiedAt'] != null, body: map['body']?.toString() ?? '', createdAt: _dateFromValue(map['createdAt']),
         helpfulCount: (map['helpfulCount'] as num?)?.toInt() ?? 0,
         status: _enumValue(CommunityContentStatus.values, map['status'], CommunityContentStatus.published),
       );
+  }
 }
