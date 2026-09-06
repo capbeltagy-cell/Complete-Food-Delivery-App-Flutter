@@ -38,7 +38,7 @@ jobs:
       - name: Generate and apply clean initial migration
         run: |
           mkdir -p prisma/migrations/0001_init
-          npx prisma migrate diff --from-empty --to-schema prisma/schema.prisma --script > prisma/migrations/0001_init/migration.sql
+          npx prisma migrate diff --from-empty --to-schema-datamodel prisma/schema.prisma --script > prisma/migrations/0001_init/migration.sql
           npx prisma migrate deploy
       - run: npm run build
       - run: npm test
@@ -50,5 +50,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: docker compose --env-file .env.example config >/dev/null
+      - run: cp .env.example .env
+      - run: docker compose --env-file .env config >/dev/null
       - run: docker build -t dierb-backend:ci backend
