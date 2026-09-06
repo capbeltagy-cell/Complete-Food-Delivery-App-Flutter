@@ -14,6 +14,7 @@ export class ChatService {
   async send(orderId: string, userId: string, body: string, type = 'text') {
     if (!body.trim() || body.length > 2000 || !['text', 'arrived'].includes(type)) throw new ForbiddenException('Invalid message');
     const conversation = await this.conversation(orderId, userId, true);
+    if (!conversation) throw new NotFoundException('Conversation could not be created');
     await this.prisma.chatParticipant.upsert({ where: { conversationId_userId: { conversationId: conversation.id, userId } }, create: { conversationId: conversation.id, userId }, update: {} });
     const message = await this.prisma.chatMessage.create({ data: { conversationId: conversation.id, senderId: userId, body: body.trim(), type }, include: { sender: { select: { id: true, name: true, role: true, avatarUrl: true } } } });
     const order = await this.prisma.order.findUniqueOrThrow({ where: { id: orderId }, include: { store: { include: { merchant: true } }, rider: true } });
@@ -21,8 +22,6 @@ export class ChatService {
     await Promise.all(recipients.map((id) => this.notifications.create(id, type === 'arrived' ? 'المندوب وصل' : 'رسالة جديدة', body.trim(), 'chat_message', orderId).catch(() => null)));
     return message;
   }
-  private async conversation(orderId: string, userId: string, create: true): Promise<{ id: string }>;
-  private async conversation(orderId: string, userId: string, create: false): Promise<{ id: string } | null>;
   private async conversation(orderId: string, userId: string, create: boolean) {
     const order = await this.prisma.order.findUnique({ where: { id: orderId }, include: { store: { include: { merchant: true } }, rider: true, conversation: true } });
     if (!order) throw new NotFoundException('Order not found');

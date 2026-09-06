@@ -24,6 +24,10 @@ class DierbApi {
   Future<void> logout() async { try { await post('auth/logout', {}); } finally { await _session.clear(); } }
   Future<Map<String, dynamic>> profile() => getMap('account');
   Future<Map<String, dynamic>> updateProfile(Map<String, dynamic> body) => patch('account', body);
+  Future<Map<String, dynamic>> merchantStore() => getMap('account/merchant/store');
+  Future<Map<String, dynamic>> createMerchantStore(Map<String, dynamic> body) => post('account/merchant/store', body);
+  Future<Map<String, dynamic>> updateMerchantStore(Map<String, dynamic> body) => patch('account/merchant/store', body);
+  Future<Map<String, dynamic>> setRiderAvailability(bool available) => patch('account/rider/availability', {'available': available});
   Future<List<dynamic>> addresses() => getList('account/addresses');
   Future<Map<String, dynamic>> createAddress(Map<String, dynamic> body) => post('account/addresses', body);
   Future<void> deleteAddress(String id) => delete('account/addresses/$id');
@@ -31,6 +35,10 @@ class DierbApi {
   Future<List<dynamic>> cities() => getList('catalog/cities', authenticated: false);
   Future<List<dynamic>> stores({String? cityId, String? categoryId}) => getList('catalog/stores', query: {if (cityId != null) 'cityId': cityId, if (categoryId != null) 'categoryId': categoryId}, authenticated: false);
   Future<Map<String, dynamic>> store(String id) => getMap('catalog/stores/$id', authenticated: false);
+  Future<Map<String, dynamic>> createProduct(Map<String, dynamic> body) => post('catalog/products', body);
+  Future<Map<String, dynamic>> updateProduct(String id, Map<String, dynamic> body) => patch('catalog/products/$id', body);
+  Future<void> archiveProduct(String id) => delete('catalog/products/$id');
+  Future<Map<String, dynamic>> setStoreOpen(String id, bool isOpen) => patch('catalog/stores/$id/state', {'isOpen': isOpen});
   Future<Map<String, dynamic>> createOrder(Map<String, dynamic> body) => post('orders', body);
   Future<List<dynamic>> orders() => getList('orders');
   Future<List<dynamic>> availableOrders() => getList('orders/available');
@@ -48,6 +56,22 @@ class DierbApi {
   Future<int> unreadNotificationCount() async => ((await getMap('notifications/unread-count'))['count'] as num?)?.toInt() ?? 0;
   Future<Map<String, dynamic>> markNotificationRead(String id) => patch('notifications/$id/read', const {});
   Future<Map<String, dynamic>> markAllNotificationsRead() => patch('notifications/read-all', const {});
+
+  Future<Map<String, dynamic>> uploadImage(List<int> bytes, String filename) async {
+    Future<Map<String, dynamic>> send(bool retry) async {
+      final token = await _session.accessToken;
+      final request = http.MultipartRequest('POST', _config.uri('uploads'))
+        ..headers.addAll({'Accept': 'application/json', if (token != null) 'Authorization': 'Bearer $token'})
+        ..files.add(http.MultipartFile.fromBytes('file', bytes, filename: filename));
+      final response = await _client.send(request).timeout(_config.timeout);
+      final text = await response.stream.bytesToString();
+      if (response.statusCode == 401 && retry) { await _refresh(); return send(false); }
+      final decoded = text.isEmpty ? null : jsonDecode(text);
+      if (response.statusCode < 200 || response.statusCode >= 300) throw DierbApiException(response.statusCode, decoded is Map ? decoded['message']?.toString() ?? 'Upload failed' : 'Upload failed');
+      return Map<String, dynamic>.from(decoded as Map);
+    }
+    return send(true);
+  }
 
   Future<List<dynamic>> getList(String path, {Map<String, String>? query, bool authenticated = true}) async => (await _request('GET', path, query: query, authenticated: authenticated)) as List<dynamic>;
   Future<Map<String, dynamic>> getMap(String path, {Map<String, String>? query, bool authenticated = true}) async => (await _request('GET', path, query: query, authenticated: authenticated)) as Map<String, dynamic>;
