@@ -56,6 +56,9 @@ class DierbApi {
   Future<int> unreadNotificationCount() async => ((await getMap('notifications/unread-count'))['count'] as num?)?.toInt() ?? 0;
   Future<Map<String, dynamic>> markNotificationRead(String id) => patch('notifications/$id/read', const {});
   Future<Map<String, dynamic>> markAllNotificationsRead() => patch('notifications/read-all', const {});
+  Future<Map<String, dynamic>> adminDashboard() => getMap('admin/dashboard');
+  Future<List<dynamic>> adminList(String resource) => getList('admin/$resource');
+  Future<Map<String, dynamic>> adminPatch(String path, Map<String, dynamic> body) => patch('admin/$path', body);
 
   Future<Map<String, dynamic>> uploadImage(List<int> bytes, String filename) async {
     Future<Map<String, dynamic>> send(bool retry) async {
