@@ -1,18 +1,19 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { APP_INTERCEPTOR } from '@nestjs/core';
 import { ThrottlerModule } from '@nestjs/throttler';
-import { HealthController } from './health.controller';
-import { PrismaModule } from './prisma/prisma.module';
+import { AccountsModule } from './accounts/accounts.module';
+import { AdminModule } from './admin/admin.module';
 import { AuthModule } from './auth/auth.module';
 import { CatalogModule } from './catalog/catalog.module';
-import { OrdersModule } from './orders/orders.module';
-import { CommunityModule } from './community/community.module';
-import { UploadsModule } from './uploads/uploads.module';
-import { NotificationsModule } from './notifications/notifications.module';
 import { ChatModule } from './chat/chat.module';
-import { AdminModule } from './admin/admin.module';
-import { APP_INTERCEPTOR } from '@nestjs/core';
 import { JsonSafeInterceptor } from './common/json-safe.interceptor';
+import { CommunityModule } from './community/community.module';
+import { HealthController } from './health.controller';
+import { NotificationsModule } from './notifications/notifications.module';
+import { OrdersModule } from './orders/orders.module';
+import { PrismaModule } from './prisma/prisma.module';
+import { UploadsModule } from './uploads/uploads.module';
 
 @Module({
   imports: [
@@ -21,8 +22,9 @@ import { JsonSafeInterceptor } from './common/json-safe.interceptor';
       if (env.JWT_ACCESS_SECRET.length < 32 || env.JWT_REFRESH_SECRET.length < 32) throw new Error('JWT secrets must be at least 32 characters');
       return env;
     }}),
-    ThrottlerModule.forRoot([{ ttl: 60000, limit: 100 }]), PrismaModule, AuthModule,
-    CatalogModule, OrdersModule, CommunityModule, UploadsModule, NotificationsModule, ChatModule, AdminModule,
+    ThrottlerModule.forRoot([{ ttl: 60000, limit: 100 }]),
+    PrismaModule, AuthModule, AccountsModule, CatalogModule, OrdersModule, CommunityModule,
+    UploadsModule, NotificationsModule, ChatModule, AdminModule,
   ],
   controllers: [HealthController],
   providers: [{ provide: APP_INTERCEPTOR, useClass: JsonSafeInterceptor }],
