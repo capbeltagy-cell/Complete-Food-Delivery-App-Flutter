@@ -1,4 +1,4 @@
-enum OrderStatus { received, waitingMerchantApproval, acceptedByMerchant, preparing, readyForPickup, pickedUpByRider, onTheWay, delivered, rejected, cancelled }
+enum OrderStatus { received, waitingMerchantApproval, acceptedByMerchant, preparing, readyForPickup, pickedUpByRider, onTheWay, arrived, delivered, rejected, cancelled }
 
 extension OrderStatusText on OrderStatus {
   String get labelAr {
@@ -10,6 +10,7 @@ extension OrderStatusText on OrderStatus {
       case OrderStatus.readyForPickup: return 'جاهز للاستلام';
       case OrderStatus.pickedUpByRider: return 'استلمه المندوب';
       case OrderStatus.onTheWay: return 'في الطريق';
+      case OrderStatus.arrived: return 'المندوب وصل';
       case OrderStatus.delivered: return 'تم التسليم';
       case OrderStatus.rejected: return 'رفض المتجر الطلب';
       case OrderStatus.cancelled: return 'ملغي';
@@ -35,7 +36,7 @@ abstract class OrderStatusCodec {
   static bool isIncoming(Object? value) => fromStorage(value) == OrderStatus.waitingMerchantApproval;
   static bool isInProgress(Object? value) {
     final status = fromStorage(value);
-    return status == OrderStatus.acceptedByMerchant || status == OrderStatus.preparing || status == OrderStatus.readyForPickup || status == OrderStatus.pickedUpByRider || status == OrderStatus.onTheWay;
+    return status == OrderStatus.acceptedByMerchant || status == OrderStatus.preparing || status == OrderStatus.readyForPickup || status == OrderStatus.pickedUpByRider || status == OrderStatus.onTheWay || status == OrderStatus.arrived;
   }
 
   /// Single source of truth for the production order state machine.
@@ -58,6 +59,8 @@ abstract class OrderStatusCodec {
       case OrderStatus.pickedUpByRider:
         return next == OrderStatus.onTheWay;
       case OrderStatus.onTheWay:
+        return next == OrderStatus.arrived;
+      case OrderStatus.arrived:
         return next == OrderStatus.delivered;
       case OrderStatus.delivered:
       case OrderStatus.rejected:
