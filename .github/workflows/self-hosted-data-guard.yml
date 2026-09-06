@@ -1,0 +1,78 @@
+name: Self-hosted Data Guard
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [dierb-self-hosted-backend]
+    paths:
+      - "user_app/**"
+      - "seller_app/**"
+      - "rider_app/**"
+      - "admin_web_portal/**"
+      - "packages/**"
+      - "backend/**"
+      - "docker-compose.yml"
+      - ".github/workflows/self-hosted-data-guard.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  zero-external-data:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Reject Firebase and hosted-data dependencies in production code
+        shell: bash
+        run: |
+          set -euo pipefail
+          TARGETS=(
+            user_app/lib user_app/pubspec.yaml
+            seller_app/lib seller_app/pubspec.yaml
+            rider_app/lib rider_app/pubspec.yaml
+            admin_web_portal/lib admin_web_portal/pubspec.yaml
+            packages
+            backend/src backend/package.json
+          )
+          PATTERN='firebase_auth|cloud_firestore|firebase_storage|firebase_core|firebase_messaging|FirebaseAuth|FirebaseFirestore|FirebaseStorage|FirebaseMessaging|Firebase\.initializeApp|supabase|appwrite|mongodb\+srv|firestore\.googleapis\.com'
+          if grep -RniE "$PATTERN" "${TARGETS[@]}"; then
+            echo "Forbidden external data/auth/storage dependency detected."
+            exit 1
+          fi
+
+      - name: Reject legacy Firebase platform configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          FOUND=0
+          for path in \
+            user_app/android/app/google-services.json \
+            seller_app/android/app/google-services.json \
+            rider_app/android/app/google-services.json \
+            admin_web_portal/android/app/google-services.json \
+            user_app/lib/firebase_options.dart \
+            seller_app/lib/firebase_options.dart \
+            rider_app/lib/firebase_options.dart \
+            admin_web_portal/lib/firebase_options.dart; do
+            if [[ -e "$path" ]]; then
+              echo "Legacy Firebase file still exists: $path"
+              FOUND=1
+            fi
+          done
+          exit "$FOUND"
+
+      - name: Verify self-hosted runtime stack
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q '^  postgres:' docker-compose.yml
+          grep -q '^  redis:' docker-compose.yml
+          grep -q '^  minio:' docker-compose.yml
+          grep -q 'DATABASE_URL: postgresql://' docker-compose.yml
+          grep -q 'REDIS_URL: redis://' docker-compose.yml
+          grep -q 'MINIO_ENDPOINT: minio' docker-compose.yml
+          grep -q 'internal: true' docker-compose.yml
+
+      - name: Summary
+        run: echo "PASS - production data authority is self-hosted PostgreSQL/Redis/MinIO with no Firebase/Supabase/Appwrite data path detected."
