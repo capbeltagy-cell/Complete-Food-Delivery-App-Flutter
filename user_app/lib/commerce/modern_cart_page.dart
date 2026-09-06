@@ -1,6 +1,4 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:dierb_core/dierb_core.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:dierb_api_client/dierb_api_client.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -62,25 +60,18 @@ class ModernCartPage extends StatelessWidget {
 }
 
 Future<void> _checkout(BuildContext cartContext, CartController cart) async {
-  final user = FirebaseAuth.instance.currentUser;
-  if (user == null) {
+  final api = DierbApi();
+  if (!await api.hasSession) {
     ScaffoldMessenger.of(cartContext).showSnackBar(const SnackBar(content: Text('سجّل الدخول من حسابي قبل إتمام الطلب')));
     return;
   }
-  if ((cart.storeId ?? '').isEmpty || (cart.merchantId ?? '').isEmpty) {
+  if ((cart.storeId ?? '').isEmpty) {
     ScaffoldMessenger.of(cartContext).showSnackBar(const SnackBar(content: Text('بيانات المتجر غير مكتملة. ارجع للمتجر وأضف المنتجات تاني.')));
     return;
   }
 
   try {
-    final storeDoc = await FirebaseFirestore.instance.collection('stores').doc(cart.storeId).get();
-    final store = storeDoc.data();
-    if (store == null || Store.merchantStatusFrom(store['status']) != MerchantStatus.approved) {
-      if (cartContext.mounted) {
-        ScaffoldMessenger.of(cartContext).showSnackBar(const SnackBar(content: Text('المتجر غير متاح للطلب حاليًا.')));
-      }
-      return;
-    }
+    final store = await api.store(cart.storeId!);
     if (store['isOpen'] != true) {
       if (cartContext.mounted) {
         ScaffoldMessenger.of(cartContext).showSnackBar(const SnackBar(content: Text('المتجر مغلق حاليًا.')));
@@ -88,17 +79,9 @@ Future<void> _checkout(BuildContext cartContext, CartController cart) async {
       return;
     }
 
-    final profile = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
-    final monetizationDoc = await FirebaseFirestore.instance.collection('appSettings').doc('monetization').get();
-    final monetization = MonetizationSettings.fromMap(monetizationDoc.data());
-    final financials = OrderFinancialSnapshot.calculate(
-      subtotal: cart.subtotal,
-      deliveryFee: (store['deliveryFee'] as num?)?.toDouble() ?? 0,
-      settings: monetization,
-      merchantCommissionBps: (store['platformCommissionBps'] as num?)?.toInt(),
-      riderPayoutPiasters: (store['riderPayoutPiasters'] as num?)?.toInt(),
-    );
-    final data = profile.data() ?? <String, dynamic>{};
+    final data = await api.profile();
+    final addresses = await api.addresses();
+    final defaultAddress = addresses.isEmpty ? null : Map<String, dynamic>.from(addresses.first as Map);
     if (!cartContext.mounted) return;
     await showModalBottomSheet<void>(
       context: cartContext,
@@ -106,23 +89,18 @@ Future<void> _checkout(BuildContext cartContext, CartController cart) async {
       useSafeArea: true,
       builder: (sheetContext) => _CheckoutSheet(
         cartContext: cartContext,
-        name: TextEditingController(text: data['name']?.toString() ?? user.displayName ?? ''),
+        name: TextEditingController(text: data['name']?.toString() ?? ''),
         phone: TextEditingController(text: data['phone']?.toString() ?? ''),
-        address: TextEditingController(text: data['address']?.toString() ?? ''),
+        address: TextEditingController(text: defaultAddress?['addressLine']?.toString() ?? ''),
         notes: TextEditingController(),
         cart: cart,
-        user: user,
-        ownerId: store['ownerId']?.toString() ?? cart.merchantId!,
-        deliveryFee: (store['deliveryFee'] as num?)?.toDouble() ?? 0,
-        cityId: store['cityId']?.toString() ?? '',
-        areaId: store['areaId']?.toString() ?? '',
-        villageId: store['villageId']?.toString() ?? '',
-        financials: financials,
+        api: api,
+        deliveryFee: ((store['deliveryFeePiasters'] as num?)?.toDouble() ?? 0) / 100,
       ),
     );
-  } on FirebaseException catch (error) {
+  } on DierbApiException catch (error) {
     if (cartContext.mounted) {
-      ScaffoldMessenger.of(cartContext).showSnackBar(SnackBar(content: Text(firestoreErrorMessage(error))));
+      ScaffoldMessenger.of(cartContext).showSnackBar(SnackBar(content: Text(error.message)));
     }
   }
 }
@@ -135,13 +113,8 @@ class _CheckoutSheet extends StatefulWidget {
     required this.address,
     required this.notes,
     required this.cart,
-    required this.user,
-    required this.ownerId,
+    required this.api,
     required this.deliveryFee,
-    required this.cityId,
-    required this.areaId,
-    required this.villageId,
-    required this.financials,
   });
 
   final BuildContext cartContext;
@@ -150,13 +123,8 @@ class _CheckoutSheet extends StatefulWidget {
   final TextEditingController address;
   final TextEditingController notes;
   final CartController cart;
-  final User user;
-  final String ownerId;
+  final DierbApi api;
   final double deliveryFee;
-  final String cityId;
-  final String areaId;
-  final String villageId;
-  final OrderFinancialSnapshot financials;
 
   @override
   State<_CheckoutSheet> createState() => _CheckoutSheetState();
@@ -176,30 +144,13 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
       error = null;
     });
     try {
-      final ref = FirebaseFirestore.instance.collection('orders').doc();
-      await ref.set(<String, dynamic>{
-        'orderId': ref.id,
-        'orderedBy': widget.user.uid,
+      await widget.api.createOrder(<String, dynamic>{
         'customerName': widget.name.text.trim(),
         'customerPhone': widget.phone.text.trim(),
-        'addressText': widget.address.text.trim(),
+        'deliveryAddress': {'addressLine': widget.address.text.trim()},
         'notes': widget.notes.text.trim(),
-        'paymentMethod': 'cashOnDelivery',
-        'paymentStatus': 'awaitingCashCollection',
-        'cashCollected': false,
         'storeId': widget.cart.storeId,
-        'storeName': widget.cart.storeName,
-        'sellerUID': widget.ownerId,
-        'riderUID': '',
-        'items': widget.cart.items.map((item) => item.toOrderMap()).toList(),
-        ...widget.financials.toMap(),
-        'status': OrderStatus.waitingMerchantApproval.name,
-        'financialSnapshotVersion': 1,
-        'cityId': widget.cityId.isEmpty ? LaunchLocationDefaults.cityId : widget.cityId,
-        'areaId': widget.areaId,
-        'villageId': widget.villageId,
-        'createdAt': FieldValue.serverTimestamp(),
-        'updatedAt': FieldValue.serverTimestamp(),
+        'items': widget.cart.items.map((item) => {'productId': item.productId, 'quantity': item.quantity}).toList(),
       });
       widget.cart.clear();
       if (mounted) Navigator.pop(context);
@@ -207,10 +158,10 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
         ScaffoldMessenger.of(widget.cartContext).showSnackBar(const SnackBar(content: Text('تم تسجيل طلبك بنجاح. تقدر تتابعه من طلباتي.')));
         Navigator.pop(widget.cartContext);
       }
-    } on FirebaseException catch (exception) {
+    } on DierbApiException catch (exception) {
       setState(() {
         saving = false;
-        error = firestoreErrorMessage(exception);
+        error = exception.message;
       });
     } catch (_) {
       setState(() {

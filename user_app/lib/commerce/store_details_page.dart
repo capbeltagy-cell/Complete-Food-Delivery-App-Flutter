@@ -1,4 +1,4 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:dierb_api_client/dierb_api_client.dart';
 import 'package:dierb_core/dierb_core.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -12,6 +12,7 @@ class StoreDetailsPage extends StatelessWidget {
   const StoreDetailsPage({super.key, required this.storeId, required this.store});
   final String storeId;
   final Map<String, dynamic> store;
+  static final DierbApi _api = DierbApi();
 
   bool _addToCart(BuildContext context, Store parsed, Product product) {
     final ownerId = parsed.ownerId.isNotEmpty ? parsed.ownerId : storeId;
@@ -174,8 +175,8 @@ class StoreDetailsPage extends StatelessWidget {
             child: Text('المنتجات', style: TextStyle(fontSize: 21, fontWeight: FontWeight.w900, color: AppConfig.textPrimary)),
           ),
         ),
-        StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-          stream: FirebaseFirestore.instance.collection('products').where('storeId', isEqualTo: storeId).where('available', isEqualTo: true).limit(80).snapshots(),
+        FutureBuilder<Map<String, dynamic>>(
+          future: _api.store(storeId),
           builder: (context, snapshot) {
             if (snapshot.hasError) {
               return SliverToBoxAdapter(child: Padding(
@@ -190,8 +191,12 @@ class StoreDetailsPage extends StatelessWidget {
             if (!snapshot.hasData) {
               return const SliverToBoxAdapter(child: Padding(padding: EdgeInsets.all(30), child: Center(child: CircularProgressIndicator())));
             }
-            final docs = snapshot.data!.docs.where((doc) => Product.fromMap(doc.id, doc.data()).available).toList();
-            if (docs.isEmpty) {
+            final products = (snapshot.data!['products'] as List? ?? const [])
+                .whereType<Map>()
+                .map((raw) { final data = Map<String, dynamic>.from(raw); return Product.fromMap(data['id'].toString(), data); })
+                .where((product) => product.available)
+                .toList(growable: false);
+            if (products.isEmpty) {
               return const SliverToBoxAdapter(child: Padding(
                 padding: EdgeInsets.all(20),
                 child: DierbMessage(icon: Icons.inventory_2_outlined, title: 'مفيش منتجات متاحة حاليًا', subtitle: 'أول ما التاجر يضيف منتجات هتظهر هنا فورًا.'),
@@ -201,10 +206,9 @@ class StoreDetailsPage extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(14, 0, 14, 110),
               sliver: SliverGrid.builder(
                 gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(maxCrossAxisExtent: 430, mainAxisExtent: 128, crossAxisSpacing: 12, mainAxisSpacing: 12),
-                itemCount: docs.length,
+                itemCount: products.length,
                 itemBuilder: (_, index) {
-                  final doc = docs[index];
-                  final product = Product.fromMap(doc.id, doc.data());
+                  final product = products[index];
                   return InkWell(
                     borderRadius: BorderRadius.circular(22),
                     onTap: () => _showProduct(context, parsed, product),

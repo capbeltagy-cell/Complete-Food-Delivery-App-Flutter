@@ -40,8 +40,11 @@ class Product {
         categoryId: map['categoryId']?.toString() ?? map['menuId']?.toString() ?? '',
         name: map['name']?.toString() ?? map['title']?.toString() ?? '',
         description: map['description']?.toString() ?? map['longDescription']?.toString() ?? '',
-        images: map['images'] is List ? List<String>.from(map['images'] as List) : <String>[if (map['thumbnailUrl'] != null) map['thumbnailUrl'].toString()],
-        price: (map['price'] as num?)?.toDouble() ?? 0, salePrice: (map['salePrice'] as num?)?.toDouble(),
+        images: map['images'] is List
+            ? (map['images'] as List).map((value) => value is Map ? value['url']?.toString() ?? '' : value.toString()).where((value) => value.isNotEmpty).toList()
+            : <String>[if (map['thumbnailUrl'] != null) map['thumbnailUrl'].toString()],
+        price: map['pricePiasters'] is num ? (map['pricePiasters'] as num).toDouble() / 100 : (map['price'] as num?)?.toDouble() ?? 0,
+        salePrice: map['salePricePiasters'] is num ? (map['salePricePiasters'] as num).toDouble() / 100 : (map['salePrice'] as num?)?.toDouble(),
         stock: (map['stock'] as num?)?.toInt(),
         options: (map['options'] as List? ?? const <dynamic>[]).whereType<Map>().map((value) => ProductOption.fromMap(Map<String, dynamic>.from(value))).toList(),
         available: map['available'] != false && map['status'] != 'unavailable', featured: map['featured'] == true,

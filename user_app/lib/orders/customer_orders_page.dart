@@ -1,6 +1,6 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'dart:async';
+import 'package:dierb_api_client/dierb_api_client.dart';
 import 'package:dierb_core/dierb_core.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 import '../widgets/dierb_states.dart';
@@ -16,19 +16,37 @@ class CustomerOrdersPage extends StatefulWidget {
 
 class _CustomerOrdersPageState extends State<CustomerOrdersPage> {
   _OrderFilter filter = _OrderFilter.active;
+  final api = DierbApi();
+  Future<List<dynamic>>? request;
+  Timer? polling;
+
+  @override void initState() {
+    super.initState();
+    _reload();
+    polling = Timer.periodic(const Duration(seconds: 8), (_) => _reload(silent: true));
+  }
+
+  Future<void> _reload({bool silent = false}) async {
+    if (!await api.hasSession) { if (mounted) setState(() => request = null); return; }
+    final next = api.orders();
+    if (mounted) setState(() => request = next);
+    if (silent) { try { await next; } catch (_) {} }
+  }
 
   @override
   Widget build(BuildContext context) => SafeArea(
         child: Scaffold(
           appBar: AppBar(title: const Text('طلباتي', style: TextStyle(fontWeight: FontWeight.w900))),
-          body: StreamBuilder<User?>(
-            stream: FirebaseAuth.instance.authStateChanges(),
-            builder: (context, auth) {
-              final user = auth.data;
-              if (user == null) {
+          body: request == null
+              ? FutureBuilder<bool>(future: api.hasSession, builder: (context, auth) {
+                  if (auth.connectionState != ConnectionState.done) return const Center(child: CircularProgressIndicator());
+                  if (auth.data != true) {
                 return const DierbMessage(icon: Icons.lock_outline_rounded, title: 'سجّل الدخول علشان تتابع طلباتك');
               }
-              return Column(children: [
+                  WidgetsBinding.instance.addPostFrameCallback((_) => _reload());
+                  return const Center(child: CircularProgressIndicator());
+                })
+              : Column(children: [
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 12),
                   child: SegmentedButton<_OrderFilter>(
@@ -43,16 +61,16 @@ class _CustomerOrdersPageState extends State<CustomerOrdersPage> {
                 ),
                 const SizedBox(height: 8),
                 Expanded(
-                  child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-                    stream: FirebaseFirestore.instance.collection('orders').where('orderedBy', isEqualTo: user.uid).snapshots(),
+                  child: FutureBuilder<List<dynamic>>(
+                    future: request,
                     builder: (context, snapshot) {
                       if (snapshot.hasError) {
-                        return DierbMessage(icon: Icons.error_outline, title: firestoreErrorMessage(snapshot.error!));
+                        return DierbMessage(icon: Icons.error_outline, title: 'تعذر تحميل الطلبات', subtitle: 'اسحب للتحديث أو حاول مرة أخرى.');
                       }
                       if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
-                      final docs = snapshot.data!.docs.where((doc) => _matches(doc.data())).toList()
-                        ..sort((a, b) => _orderMillis(b.data()).compareTo(_orderMillis(a.data())));
-                      if (docs.isEmpty) {
+                      final orders = snapshot.data!.whereType<Map>().map((raw) => Map<String, dynamic>.from(raw)).where(_matches).toList()
+                        ..sort((a, b) => _orderMillis(b).compareTo(_orderMillis(a)));
+                      if (orders.isEmpty) {
                         return const DierbMessage(
                           icon: Icons.receipt_long_outlined,
                           title: 'مفيش طلبات في القسم ده',
@@ -61,18 +79,18 @@ class _CustomerOrdersPageState extends State<CustomerOrdersPage> {
                       }
                       return ListView.separated(
                         padding: const EdgeInsets.fromLTRB(14, 4, 14, 90),
-                        itemCount: docs.length,
+                        itemCount: orders.length,
                         separatorBuilder: (_, __) => const SizedBox(height: 10),
-                        itemBuilder: (_, index) => _OrderCard(id: docs[index].id, data: docs[index].data()),
+                        itemBuilder: (_, index) => _OrderCard(id: orders[index]['id'].toString(), data: orders[index]),
                       );
                     },
                   ),
                 ),
-              ]);
-            },
-          ),
+              ]),
         ),
       );
+
+  @override void dispose() { polling?.cancel(); api.close(); super.dispose(); }
 
   bool _matches(Map<String, dynamic> data) {
     final status = OrderStatusCodec.fromStorage(data['status']?.toString());
@@ -84,8 +102,7 @@ class _CustomerOrdersPageState extends State<CustomerOrdersPage> {
 
 int _orderMillis(Map<String, dynamic> data) {
   final value = data['createdAt'] ?? data['orderTime'];
-  if (value is Timestamp) return value.millisecondsSinceEpoch;
-  return int.tryParse(value?.toString() ?? '') ?? 0;
+  return DateTime.tryParse(value?.toString() ?? '')?.millisecondsSinceEpoch ?? 0;
 }
 
 class _OrderCard extends StatelessWidget {
@@ -96,10 +113,10 @@ class _OrderCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final status = OrderStatusCodec.fromStorage(data['status']?.toString());
-    final total = (data['total'] ?? data['totolAmmount'] ?? 0) as num;
+    final total = ((data['totalPiasters'] ?? 0) as num).toDouble() / 100;
     final items = (data['items'] as List?)?.whereType<Map>().toList() ?? const <Map>[];
-    final firstImage = items.isEmpty ? '' : (items.first['image'] ?? '').toString();
-    final storeName = (data['storeName'] ?? 'متجر ديرب').toString();
+    final firstImage = items.isEmpty ? '' : (items.first['imageUrl'] ?? items.first['image'] ?? '').toString();
+    final storeName = ((data['store'] as Map?)?['name'] ?? 'متجر ديرب').toString();
     return Card(
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
@@ -164,8 +181,8 @@ class _OrderCard extends StatelessWidget {
             const SizedBox(height: 16),
             Container(padding: const EdgeInsets.all(16), decoration: BoxDecoration(color: const Color(0xFFF7FAF8), borderRadius: BorderRadius.circular(20)), child: _Timeline(current: status)),
             const Divider(height: 30),
-            if ((data['storeName'] ?? '').toString().isNotEmpty) ListTile(leading: const Icon(Icons.storefront_outlined), title: Text(data['storeName'].toString())),
-            ListTile(leading: const Icon(Icons.location_on_outlined), title: const Text('عنوان التوصيل'), subtitle: Text((data['addressText'] ?? data['address'] ?? data['addressId'] ?? 'غير محدد').toString())),
+            if (data['store'] is Map) ListTile(leading: const Icon(Icons.storefront_outlined), title: Text(((data['store'] as Map)['name'] ?? 'متجر ديرب').toString())),
+            ListTile(leading: const Icon(Icons.location_on_outlined), title: const Text('عنوان التوصيل'), subtitle: Text(_addressText(data['deliveryAddress']))),
             ListTile(leading: const Icon(Icons.payments_outlined), title: const Text('طريقة الدفع'), subtitle: Text(data['paymentMethod'] == 'cashOnDelivery' ? 'الدفع عند الاستلام' : (data['paymentMethod'] ?? 'الدفع عند الاستلام').toString())),
             if ((data['customerPhone'] ?? '').toString().isNotEmpty) ListTile(leading: const Icon(Icons.phone_outlined), title: const Text('هاتف الاستلام'), subtitle: Text(data['customerPhone'].toString())),
             if ((data['notes'] ?? '').toString().isNotEmpty) ListTile(leading: const Icon(Icons.notes_rounded), title: const Text('ملاحظات'), subtitle: Text(data['notes'].toString())),
@@ -183,20 +200,20 @@ class _OrderCard extends StatelessWidget {
             ...items.map((item) => Padding(
                   padding: const EdgeInsets.symmetric(vertical: 5),
                   child: Row(children: [
-                    _OrderImage(url: (item['image'] ?? '').toString(), size: 54),
+                    _OrderImage(url: (item['imageUrl'] ?? item['image'] ?? '').toString(), size: 54),
                     const SizedBox(width: 11),
                     Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                       Text((item['name'] ?? 'منتج').toString(), style: const TextStyle(fontWeight: FontWeight.w800)),
                       Text('الكمية: ${item['quantity'] ?? 1}', style: const TextStyle(color: Color(0xFF68766F), fontSize: 12)),
                     ])),
-                    Text('${item['price'] ?? 0} ج.م', style: const TextStyle(fontWeight: FontWeight.w800)),
+                    Text('${(((item['unitPricePiasters'] ?? 0) as num).toDouble() / 100).toStringAsFixed(2)} ج.م', style: const TextStyle(fontWeight: FontWeight.w800)),
                   ]),
                 )),
             const Divider(),
-            if ((data['deliveryFee'] as num?) != null) ListTile(title: const Text('رسوم التوصيل'), trailing: Text('${data['deliveryFee']} ج.م')),
+            ListTile(title: const Text('رسوم التوصيل'), trailing: Text('${(((data['deliveryFeePiasters'] ?? 0) as num).toDouble() / 100).toStringAsFixed(2)} ج.م')),
             ListTile(
               title: const Text('الإجمالي', style: TextStyle(fontWeight: FontWeight.w900)),
-              trailing: Text('${data['total'] ?? data['totolAmmount'] ?? 0} ج.م', style: const TextStyle(fontWeight: FontWeight.w900)),
+              trailing: Text('${(((data['totalPiasters'] ?? 0) as num).toDouble() / 100).toStringAsFixed(2)} ج.م', style: const TextStyle(fontWeight: FontWeight.w900)),
             ),
           ],
         ),
@@ -267,11 +284,16 @@ class _OrderImage extends StatelessWidget {
 
 String _formatOrderTime(Map<String, dynamic> data) {
   final value = data['createdAt'] ?? data['orderTime'];
-  final date = value is Timestamp ? value.toDate() : DateTime.tryParse(value?.toString() ?? '');
+  final date = DateTime.tryParse(value?.toString() ?? '')?.toLocal();
   if (date == null) return 'الوقت غير محدد';
   final hour = date.hour % 12 == 0 ? 12 : date.hour % 12;
   final minute = date.minute.toString().padLeft(2, '0');
   return '${date.day}/${date.month} • $hour:$minute ${date.hour >= 12 ? 'م' : 'ص'}';
+}
+
+String _addressText(dynamic value) {
+  if (value is Map) return (value['addressLine'] ?? value['line'] ?? value.values.join('، ')).toString();
+  return value?.toString() ?? 'غير محدد';
 }
 
 Color _statusColor(OrderStatus status) {
