@@ -12,8 +12,10 @@ export class AuthService {
   constructor(private readonly prisma: PrismaService, private readonly jwt: JwtService, private readonly config: ConfigService) {}
   async register(dto: RegisterDto) {
     const email = dto.email.trim().toLowerCase();
-    if (dto.role && ![Role.customer, Role.merchant, Role.rider].includes(dto.role)) throw new BadRequestException('Role cannot be self-assigned');
-    const user = await this.prisma.user.create({data:{email,name:dto.name.trim(),phone:dto.phone,passwordHash:await argon2.hash(dto.password),role:dto.role ?? Role.customer}});
+    const selfAssignable: Role[] = [Role.customer, Role.merchant, Role.rider];
+    if (dto.role && !selfAssignable.includes(dto.role)) throw new BadRequestException('Role cannot be self-assigned');
+    const role=dto.role??Role.customer;
+    const user = await this.prisma.user.create({data:{email,name:dto.name.trim(),phone:dto.phone,passwordHash:await argon2.hash(dto.password),role,...(role===Role.customer&&{customerProfile:{create:{}}}),...(role===Role.merchant&&{merchant:{create:{businessName:dto.name.trim()}}}),...(role===Role.rider&&{rider:{create:{}}})}});
     return this.issue(user.id, user.role, 'registration');
   }
   async login(dto: LoginDto) {
