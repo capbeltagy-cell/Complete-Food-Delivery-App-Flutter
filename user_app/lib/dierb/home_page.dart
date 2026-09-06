@@ -1,4 +1,4 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:dierb_api_client/dierb_api_client.dart';
 import 'package:dierb_core/dierb_core.dart';
 import 'package:flutter/material.dart';
 import '../community/ask_dierb_page.dart';
@@ -87,20 +87,27 @@ class DierbHomePage extends StatelessWidget {
   }
 }
 
-class _HomeCategories extends StatelessWidget {
+class _HomeCategories extends StatefulWidget {
   const _HomeCategories();
+  @override State<_HomeCategories> createState() => _HomeCategoriesState();
+}
+
+class _HomeCategoriesState extends State<_HomeCategories> {
+  final api = DierbApi();
+  late Future<List<dynamic>> request = api.categories();
   @override
-  Widget build(BuildContext context) => StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-        stream: FirebaseFirestore.instance.collection('categories').where('active', isEqualTo: true).orderBy('sortOrder').limit(8).snapshots(),
+  Widget build(BuildContext context) => FutureBuilder<List<dynamic>>(
+        future: request,
         builder: (context, snapshot) {
-          if (!snapshot.hasData || snapshot.hasError) {
+          if (snapshot.hasError) {
             return SizedBox(
               height: 92,
-              child: Center(child: snapshot.hasError ? const Text('تعذر تحميل الأقسام') : const CircularProgressIndicator()),
+              child: Center(child: TextButton(onPressed: () => setState(() => request = api.categories()), child: const Text('تعذر تحميل الأقسام — إعادة المحاولة'))),
             );
           }
-          final remote = snapshot.data!.docs.map((doc) => Category.fromMap(doc.id, doc.data())).toList(growable: false);
-          final categories = remote.isEmpty ? LaunchCategoryDefaults.values.where((item) => item.active && item.featured).take(8).toList(growable: false) : remote;
+          if (!snapshot.hasData) return const SizedBox(height: 92, child: Center(child: CircularProgressIndicator()));
+          final categories = snapshot.data!.take(8).map((raw) { final map = Map<String, dynamic>.from(raw as Map); return Category.fromMap(map['id'].toString(), map); }).toList(growable: false);
+          if (categories.isEmpty) return const SizedBox(height: 92, child: Center(child: Text('لا توجد أقسام متاحة حاليًا')));
           return GridView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
@@ -131,6 +138,7 @@ class _HomeCategories extends StatelessWidget {
           );
         },
       );
+  @override void dispose() { api.close(); super.dispose(); }
 }
 
 class _Header extends StatelessWidget {
