@@ -5,6 +5,7 @@ import '../community/ask_dierb_page.dart';
 import '../marketplace/categories_page.dart';
 import '../marketplace/local_listings_page.dart';
 import '../marketplace/search_page.dart';
+import '../notifications/notification_center_page.dart';
 import 'app_config.dart';
 
 class DierbHomePage extends StatelessWidget {
@@ -162,9 +163,10 @@ class _Header extends StatelessWidget {
             const SizedBox(height: 3),
             Row(children: [const Icon(Icons.location_on_rounded, size: 15, color: AppConfig.accentColor), const SizedBox(width: 3), Text(LaunchLocationDefaults.city.nameAr, style: const TextStyle(color: AppConfig.textSecondary, fontWeight: FontWeight.w700))]),
           ])),
-          Container(
-            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(15), border: Border.all(color: AppConfig.borderColor)),
-            child: const Icon(Icons.location_city_rounded, color: AppConfig.brandColor),
+          IconButton.filledTonal(
+            tooltip: 'الإشعارات',
+            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationCenterPage())),
+            icon: const Icon(Icons.notifications_none_rounded),
           ),
         ]),
       );
