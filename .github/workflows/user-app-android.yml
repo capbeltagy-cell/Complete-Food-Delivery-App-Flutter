@@ -3,7 +3,7 @@ name: Build Dierb Platform
 on:
   workflow_dispatch:
   push:
-    branches: [dierb-super-app]
+    branches: [dierb-super-app, dierb-self-hosted-backend]
     paths:
       - ".github/workflows/user-app-android.yml"
       - "user_app/**"
@@ -11,6 +11,7 @@ on:
       - "rider_app/**"
       - "admin_web_portal/**"
       - "packages/dierb_core/**"
+      - "packages/dierb_api_client/**"
 
 permissions:
   contents: read

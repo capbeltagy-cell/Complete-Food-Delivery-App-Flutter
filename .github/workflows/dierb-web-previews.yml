@@ -3,7 +3,7 @@ name: Build Dierb Web Previews
 on:
   workflow_dispatch:
   push:
-    branches: [dierb-super-app]
+    branches: [dierb-super-app, dierb-self-hosted-backend]
     paths:
       - 'user_app/**'
       - 'seller_app/**'
