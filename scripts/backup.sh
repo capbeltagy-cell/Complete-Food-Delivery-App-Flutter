@@ -10,5 +10,5 @@ minio_container="$(docker compose ps -q minio)"
 test -n "$minio_container"
 docker run --rm --volumes-from "$minio_container":ro -v "$(pwd)/$target:/backup" alpine tar czf /backup/minio-data.tar.gz -C /data .
 
-sha256sum "$target"/postgres.dump "$target"/minio-data.tar.gz > "$target/SHA256SUMS"
+(cd "$target" && sha256sum postgres.dump minio-data.tar.gz > SHA256SUMS)
 echo "$target"
