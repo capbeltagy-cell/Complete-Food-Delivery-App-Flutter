@@ -27,12 +27,33 @@ jobs:
       JWT_REFRESH_SECRET: ci-refresh-secret-must-be-at-least-32-characters
       CORS_ORIGINS: http://localhost:8080
       PUBLIC_API_URL: http://localhost:3000
-      UPLOAD_ROOT: /tmp/dierb-uploads
+      STORAGE_DRIVER: minio
+      MINIO_ENDPOINT: localhost
+      MINIO_PORT: 9000
+      MINIO_BUCKET: dierb-ci-uploads
+      MINIO_REGION: us-east-1
+      MINIO_ACCESS_KEY: dierb-ci-minio
+      MINIO_SECRET_KEY: dierb-ci-minio-secret
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: {node-version: 22, cache: npm, cache-dependency-path: backend/package.json}
+      - name: Start self-hosted MinIO
+        run: |
+          docker run -d --name dierb-ci-minio -p 9000:9000 \
+            -e MINIO_ROOT_USER="$MINIO_ACCESS_KEY" \
+            -e MINIO_ROOT_PASSWORD="$MINIO_SECRET_KEY" \
+            minio/minio:RELEASE.2025-05-24T17-08-30Z server /data
+          for i in $(seq 1 30); do curl -fsS http://localhost:9000/minio/health/ready && exit 0; sleep 2; done
+          docker logs dierb-ci-minio
+          exit 1
       - run: npm install
+      - name: Verify MinIO put/get/delete
+        run: |
+          node - <<'NODE'
+          const {S3Client,CreateBucketCommand,PutObjectCommand,GetObjectCommand,DeleteObjectCommand}=require('@aws-sdk/client-s3');
+          (async()=>{const c=new S3Client({endpoint:'http://localhost:9000',region:'us-east-1',forcePathStyle:true,credentials:{accessKeyId:process.env.MINIO_ACCESS_KEY,secretAccessKey:process.env.MINIO_SECRET_KEY}});const b=process.env.MINIO_BUCKET;try{await c.send(new CreateBucketCommand({Bucket:b}))}catch(e){if(e.name!=='BucketAlreadyOwnedByYou'&&e.name!=='BucketAlreadyExists')throw e}await c.send(new PutObjectCommand({Bucket:b,Key:'ci-smoke.txt',Body:'dierb-minio-ok'}));const o=await c.send(new GetObjectCommand({Bucket:b,Key:'ci-smoke.txt'}));const text=await o.Body.transformToString();if(text!=='dierb-minio-ok')throw new Error('MinIO readback mismatch');await c.send(new DeleteObjectCommand({Bucket:b,Key:'ci-smoke.txt'}));console.log('MinIO smoke PASS')})().catch(e=>{console.error(e);process.exit(1)});
+          NODE
       - run: npx prisma validate
       - run: npx prisma generate
       - name: Apply committed PostgreSQL migrations
@@ -41,6 +62,8 @@ jobs:
       - run: npm test
       - run: npm run test:e2e
       - run: npm run prisma:seed
+      - name: Production dependency audit
+        run: npm audit --omit=dev --audit-level=high
   docker:
     runs-on: ubuntu-latest
     steps:
@@ -48,3 +71,22 @@ jobs:
       - run: cp .env.example .env
       - run: docker compose --env-file .env config >/dev/null
       - run: docker build -t dierb-backend:ci backend
+      - name: Verify PostgreSQL and MinIO backup/restore scripts
+        run: |
+          chmod +x scripts/backup.sh scripts/restore.sh
+          sh -n scripts/backup.sh
+          sh -n scripts/restore.sh
+          docker compose --env-file .env up -d postgres minio
+          for i in $(seq 1 45); do
+            pg="$(docker inspect -f '{{.State.Health.Status}}' "$(docker compose ps -q postgres)" 2>/dev/null || true)"
+            mi="$(docker inspect -f '{{.State.Health.Status}}' "$(docker compose ps -q minio)" 2>/dev/null || true)"
+            [ "$pg" = healthy ] && [ "$mi" = healthy ] && break
+            sleep 2
+          done
+          [ "$(docker inspect -f '{{.State.Health.Status}}' "$(docker compose ps -q postgres)")" = healthy ]
+          [ "$(docker inspect -f '{{.State.Health.Status}}' "$(docker compose ps -q minio)")" = healthy ]
+          backup_dir="$(BACKUP_DIR=./ci-backups ./scripts/backup.sh)"
+          test -s "$backup_dir/postgres.dump"
+          test -s "$backup_dir/minio-data.tar.gz"
+          ./scripts/restore.sh "$backup_dir"
+          docker compose down -v
