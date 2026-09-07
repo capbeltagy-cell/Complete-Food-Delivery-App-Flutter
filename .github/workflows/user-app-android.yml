@@ -12,6 +12,9 @@ on:
       - "admin_web_portal/**"
       - "packages/dierb_core/**"
       - "packages/dierb_api_client/**"
+      - "backend/**"
+      - "docker-compose.yml"
+      - "deploy/**"
 
 permissions:
   contents: read
