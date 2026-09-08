@@ -30,7 +30,7 @@ concurrency:
 
 jobs:
   vps:
-    runs-on: [self-hosted, Windows, X64]
+    runs-on: self-hosted
     timeout-minutes: 90
     defaults:
       run:
