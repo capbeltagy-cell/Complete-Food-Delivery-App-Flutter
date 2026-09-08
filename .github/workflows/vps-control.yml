@@ -17,7 +17,7 @@ on:
           - full_verify
   push:
     branches:
-      - dierb-super-app
+      - dierb-self-hosted-backend
     paths:
       - .github/workflows/vps-control.yml
 
@@ -129,11 +129,11 @@ jobs:
           retention-days: 7
 
       - name: Create protected working copy from authoritative VPS
-        if: ${{ github.event_name == 'push' || inputs.task == 'repair_arabic' || inputs.task == 'analyze' || inputs.task == 'build_customer' || inputs.task == 'build_all' || inputs.task == 'full_verify' }}
+        if: ${{ inputs.task == 'repair_arabic' || inputs.task == 'analyze' || inputs.task == 'build_customer' || inputs.task == 'build_all' || inputs.task == 'full_verify' }}
         run: |
           $ErrorActionPreference = 'Stop'
           $sourceRoot = 'C:\DierbPlatform\Dierb-FINAL'
-          $workRoot = Join-Path $env:RUNNER_TEMP 'Dierb-FINAL-work'
+          $workRoot = Join-Path $env:RUNNER_TEMP 'Dierb-PRODUCTION-work'
           if (Test-Path $workRoot) { Remove-Item $workRoot -Recurse -Force }
           New-Item $workRoot -ItemType Directory -Force | Out-Null
           $projects = @('user_app', 'seller_app', 'rider_app', 'admin_web_portal', 'packages')
@@ -154,7 +154,7 @@ jobs:
           $global:LASTEXITCODE = 0
 
       - name: Overlay branch fixes onto protected working copy
-        if: ${{ github.event_name == 'push' || inputs.task == 'repair_arabic' || inputs.task == 'analyze' || inputs.task == 'build_customer' || inputs.task == 'build_all' || inputs.task == 'full_verify' }}
+        if: ${{ inputs.task == 'repair_arabic' || inputs.task == 'analyze' || inputs.task == 'build_customer' || inputs.task == 'build_all' || inputs.task == 'full_verify' }}
         run: |
           $ErrorActionPreference = 'Stop'
           $root = $env:DIERB_WORK_ROOT
@@ -178,7 +178,7 @@ jobs:
           Write-Host "Overlayed $($paths.Count) branch files onto protected working copy."
 
       - name: Repair Arabic encoding with rollback backup
-        if: ${{ github.event_name == 'push' || inputs.task == 'repair_arabic' || inputs.task == 'full_verify' }}
+        if: ${{ inputs.task == 'repair_arabic' || inputs.task == 'full_verify' }}
         run: |
           $ErrorActionPreference = 'Stop'
           $root = $env:DIERB_WORK_ROOT
@@ -266,7 +266,7 @@ jobs:
           "Repaired files: $($changed.Count); remaining suspicious lines: 0" >> $env:GITHUB_STEP_SUMMARY
 
       - name: Capture repaired source
-        if: ${{ github.event_name == 'push' || inputs.task == 'repair_arabic' || inputs.task == 'full_verify' }}
+        if: ${{ inputs.task == 'repair_arabic' || inputs.task == 'full_verify' }}
         run: |
           $ErrorActionPreference = 'Stop'
           $root = $env:DIERB_WORK_ROOT
@@ -286,7 +286,7 @@ jobs:
           Copy-Item (Join-Path $env:RUNNER_TEMP 'arabic-remaining.txt') $out
 
       - name: Upload repaired source checkpoint
-        if: ${{ github.event_name == 'push' || inputs.task == 'repair_arabic' || inputs.task == 'full_verify' }}
+        if: ${{ inputs.task == 'repair_arabic' || inputs.task == 'full_verify' }}
         uses: actions/upload-artifact@v4
         with:
           name: Dierb-Repaired-Arabic-Source
@@ -295,7 +295,7 @@ jobs:
           retention-days: 7
 
       - name: Analyze Flutter apps
-        if: ${{ github.event_name == 'push' || inputs.task == 'analyze' || inputs.task == 'build_all' || inputs.task == 'full_verify' }}
+        if: ${{ inputs.task == 'analyze' || inputs.task == 'build_all' || inputs.task == 'full_verify' }}
         run: |
           $ErrorActionPreference = 'Stop'
           $flutter = 'C:\DierbTools\flutter\bin\flutter.bat'
